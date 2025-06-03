@@ -5,11 +5,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { config, validateConfig } from './config.js';
+import { SessionManager } from './session-manager.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
   version: '1.0.0',
 });
+
+// Initialize session manager
+const sessionManager = new SessionManager();
+
+// Store cleanup interval globally for shutdown
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 // Register the login tool
 server.registerTool('login', {
@@ -17,20 +24,40 @@ server.registerTool('login', {
   inputSchema: {
     agent_name: z.string().describe('The name of the agent logging in'),
   },
-}, async ({ agent_name }) => {
-  // Placeholder implementation
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          success: false,
-          error: 'Not implemented yet',
-          agent_name,
-        }),
-      },
-    ],
-  };
+}, async ({ agent_name }, _context) => {
+  // For now, we'll use a generated session ID since MCP doesn't provide connection context
+  // In a real implementation, this would come from the transport layer
+  const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  
+  try {
+    const session = await sessionManager.createSession(sessionId, agent_name);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            agent_name: session.agentName,
+            team_name: config.teamName,
+            session_id: session.sessionId,
+          }),
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: false,
+            error: 'Failed to create session',
+            details: error instanceof Error ? error.message : 'Unknown error',
+          }),
+        },
+      ],
+    };
+  }
 });
 
 // Register the read_posts tool
@@ -90,10 +117,42 @@ async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('MCP Agent Social Server running...');
+    
+    // Set up graceful shutdown
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    
+    // Set up periodic session cleanup (every 30 minutes)
+    cleanupInterval = setInterval(() => {
+      const removed = sessionManager.cleanupOldSessions(3600000); // 1 hour
+      if (removed > 0) {
+        console.error(`Cleaned up ${removed} old sessions`);
+      }
+    }, 1800000); // 30 minutes
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
+}
+
+async function shutdown(signal: string) {
+  console.error(`\nReceived ${signal}, shutting down gracefully...`);
+  
+  // Clear cleanup interval
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+  }
+  
+  // Clean up sessions
+  const sessionCount = sessionManager.getSessionCount();
+  if (sessionCount > 0) {
+    console.error(`Cleaning up ${sessionCount} active sessions...`);
+    sessionManager.clearAllSessions();
+  }
+  
+  // Close server
+  await server.close();
+  process.exit(0);
 }
 
 main().catch((error) => {

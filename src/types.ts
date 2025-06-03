@@ -14,3 +14,9 @@ export interface MCPError {
   message: string;
   data?: unknown;
 }
+
+export interface Session {
+  sessionId: string;
+  agentName: string;
+  loginTimestamp: Date;
+}

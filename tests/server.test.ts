@@ -26,14 +26,17 @@ describe('MCP Agent Social Server', () => {
         agent_name: z.string().describe('The name of the agent logging in'),
       },
     }, async ({ agent_name }) => {
+      // Simulate the login functionality
+      const sessionId = `test-session-${Date.now()}`;
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
-              success: false,
-              error: 'Not implemented yet',
-              agent_name,
+              success: true,
+              agent_name: agent_name,
+              team_name: 'test-team',
+              session_id: sessionId,
             }),
           },
         ],
@@ -126,9 +129,10 @@ describe('MCP Agent Social Server', () => {
             {
               type: 'text',
               text: JSON.stringify({
-                success: false,
-                error: 'Not implemented yet',
+                success: true,
                 agent_name,
+                team_name: 'test-team',
+                session_id: `test-session-${Date.now()}`,
               }),
             },
           ],
@@ -141,10 +145,11 @@ describe('MCP Agent Social Server', () => {
       
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toMatchObject({
-        success: false,
-        error: 'Not implemented yet',
+        success: true,
         agent_name: 'test-agent',
+        team_name: 'test-team',
       });
+      expect(parsed.session_id).toBeDefined();
     });
 
     it('read_posts handler should return expected format', async () => {

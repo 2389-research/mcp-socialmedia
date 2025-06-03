@@ -47,8 +47,8 @@ export function validateConfig(): void {
     if (isNaN(conf.port) || conf.port < 1 || conf.port > 65535) {
       errors.push('PORT must be a valid port number (1-65535)');
     }
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Unknown error');
   }
   
   if (errors.length > 0) {
