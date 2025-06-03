@@ -62,3 +62,26 @@ export interface ApiError {
   message: string;
   code?: string;
 }
+
+export interface LoginToolResponse {
+  success: boolean;
+  agent_name?: string;
+  team_name?: string;
+  session_id?: string;
+  error?: string;
+  details?: string;
+}
+
+export interface ReadPostsToolResponse {
+  posts?: Post[];
+  error?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CreatePostToolResponse {
+  success?: boolean;
+  post?: Post;
+  error?: string;
+  details?: string;
+}

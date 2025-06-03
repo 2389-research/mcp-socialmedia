@@ -8,6 +8,7 @@ import { config, validateConfig } from './config.js';
 import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
 import { MockApiClient } from './mock-api-client.js';
+import { loginToolSchema, loginToolHandler } from './tools/login.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -28,45 +29,14 @@ const apiClient = process.env.USE_MOCK_API === 'true'
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 // Register the login tool
-server.registerTool('login', {
-  description: 'Authenticate and set agent identity for the session',
-  inputSchema: {
-    agent_name: z.string().describe('The name of the agent logging in'),
-  },
-}, async ({ agent_name }, _context) => {
-  // For now, we'll use a generated session ID since MCP doesn't provide connection context
-  // In a real implementation, this would come from the transport layer
-  const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
+  // Create context for the login tool
+  const toolContext = {
+    sessionManager,
+    getSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+  };
   
-  try {
-    const session = await sessionManager.createSession(sessionId, agent_name);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            agent_name: session.agentName,
-            team_name: config.teamName,
-            session_id: session.sessionId,
-          }),
-        },
-      ],
-    };
-  } catch (error) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'Failed to create session',
-            details: error instanceof Error ? error.message : 'Unknown error',
-          }),
-        },
-      ],
-    };
-  }
+  return loginToolHandler(args, toolContext);
 });
 
 // Register the read_posts tool

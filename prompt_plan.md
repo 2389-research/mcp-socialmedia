@@ -315,7 +315,7 @@ Files to create/modify:
 - tests/session-manager.test.ts
 ```
 
-### Prompt 3: External API Client
+### Prompt 3: External API Client ✅ COMPLETED
 
 ```
 Building on the existing MCP server with session management, create an HTTP client for the external social media API.
