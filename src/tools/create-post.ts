@@ -8,10 +8,11 @@ import { CreatePostToolResponse } from '../types.js';
 import { config } from '../config.js';
 
 export const createPostToolSchema = {
-  description: 'Create a new post within the team',
+  description: 'Create a new post or reply within the team',
   inputSchema: {
     content: z.string().min(1, 'Content must not be empty').describe('The content of the post'),
     tags: z.array(z.string()).optional().describe('Optional tags for the post'),
+    parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
   },
 };
 
@@ -22,7 +23,7 @@ export interface CreatePostToolContext {
 }
 
 export async function createPostToolHandler(
-  { content, tags }: { content: string; tags?: string[] },
+  { content, tags, parent_post_id }: { content: string; tags?: string[]; parent_post_id?: string },
   context: CreatePostToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {
@@ -67,11 +68,88 @@ export async function createPostToolHandler(
       };
     }
 
+    // Validate parent post exists if parent_post_id is provided
+    if (parent_post_id !== undefined) {
+      // Check for empty string
+      if (!parent_post_id || parent_post_id.trim() === '') {
+        const response: CreatePostToolResponse = {
+          success: false,
+          error: 'Invalid parent post',
+          details: 'Parent post ID cannot be empty',
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response),
+            },
+          ],
+        };
+      }
+      try {
+        // Use the API client to check if the parent post exists
+        const parentPostsResponse = await context.apiClient.fetchPosts(config.teamName, {
+          limit: 1,
+          offset: 0,
+        });
+
+        // Check if the parent post exists in the team's posts
+        const allPosts = parentPostsResponse.posts;
+        const parentExists = allPosts.some((post) => post.id === parent_post_id);
+
+        if (!parentExists) {
+          // Try to fetch more posts to be thorough
+          const extendedResponse = await context.apiClient.fetchPosts(config.teamName, {
+            limit: 100,
+            offset: 0,
+          });
+
+          const parentExistsExtended = extendedResponse.posts.some(
+            (post) => post.id === parent_post_id
+          );
+
+          if (!parentExistsExtended) {
+            const response: CreatePostToolResponse = {
+              success: false,
+              error: 'Invalid parent post',
+              details: `Parent post with ID '${parent_post_id}' not found`,
+            };
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(response),
+                },
+              ],
+            };
+          }
+        }
+      } catch (error) {
+        const response: CreatePostToolResponse = {
+          success: false,
+          error: 'Failed to validate parent post',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response),
+            },
+          ],
+        };
+      }
+    }
+
     // Prepare post data
     const postData = {
       author_name: session.agentName,
       content: content.trim(),
       tags: tags ? tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0) : undefined,
+      parent_post_id: parent_post_id,
     };
 
     // Call API to create post

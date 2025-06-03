@@ -412,4 +412,215 @@ describe('Create Post Tool', () => {
       expect(response.post!.tags).toEqual(unicodeTags);
     });
   });
+
+  describe('Reply functionality', () => {
+    beforeEach(async () => {
+      // Create a logged-in session
+      await sessionManager.createSession('test-session-123', 'test-agent');
+
+      // Add a parent post to the mock API
+      mockApiClient.addPost({
+        id: 'parent-post-1',
+        team_name: 'test-team',
+        author_name: 'test-author',
+        content: 'This is a parent post',
+        tags: ['discussion'],
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    it('should create a reply to an existing post', async () => {
+      const result = await createPostToolHandler(
+        {
+          content: 'This is a reply',
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(true);
+      expect(response.post).toBeDefined();
+      expect(response.post!.content).toBe('This is a reply');
+      expect(response.post!.parent_post_id).toBe('parent-post-1');
+    });
+
+    it('should create a reply with tags', async () => {
+      const result = await createPostToolHandler(
+        {
+          content: 'Reply with tags',
+          tags: ['response', 'feedback'],
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(true);
+      expect(response.post!.tags).toEqual(['response', 'feedback']);
+      expect(response.post!.parent_post_id).toBe('parent-post-1');
+    });
+
+    it('should reject reply to non-existent parent post', async () => {
+      const result = await createPostToolHandler(
+        {
+          content: 'Reply to ghost',
+          parent_post_id: 'non-existent-post',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Invalid parent post');
+      expect(response.details).toContain("Parent post with ID 'non-existent-post' not found");
+    });
+
+    it('should allow nested replies (reply to a reply)', async () => {
+      // First create a reply
+      const firstReply = await createPostToolHandler(
+        {
+          content: 'First level reply',
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const firstResponse: CreatePostToolResponse = JSON.parse(firstReply.content[0].text);
+      expect(firstResponse.success).toBe(true);
+      const firstReplyId = firstResponse.post!.id;
+
+      // Add the reply to mock API so it can be found
+      mockApiClient.addPost(firstResponse.post!);
+
+      // Create a reply to the reply
+      const nestedReply = await createPostToolHandler(
+        {
+          content: 'Nested reply',
+          parent_post_id: firstReplyId,
+        },
+        context
+      );
+
+      const nestedResponse: CreatePostToolResponse = JSON.parse(nestedReply.content[0].text);
+      expect(nestedResponse.success).toBe(true);
+      expect(nestedResponse.post!.parent_post_id).toBe(firstReplyId);
+    });
+
+    it('should require login for creating replies', async () => {
+      // Delete the session
+      sessionManager.deleteSession('test-session-123');
+
+      const result = await createPostToolHandler(
+        {
+          content: 'Unauthorized reply',
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Authentication required');
+    });
+
+    it('should handle parent post validation errors gracefully', async () => {
+      // Make the API fail during parent validation
+      jest
+        .spyOn(mockApiClient, 'fetchPosts')
+        .mockRejectedValueOnce(new Error('Network error during validation'));
+
+      const result = await createPostToolHandler(
+        {
+          content: 'Reply with network error',
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Failed to validate parent post');
+      expect(response.details).toContain('Network error during validation');
+    });
+
+    it('should maintain all post properties when creating a reply', async () => {
+      const content = 'Full featured reply';
+      const tags = ['important', 'urgent'];
+
+      const result = await createPostToolHandler(
+        {
+          content,
+          tags,
+          parent_post_id: 'parent-post-1',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(true);
+
+      const post = response.post!;
+      expect(post.content).toBe(content);
+      expect(post.tags).toEqual(tags);
+      expect(post.parent_post_id).toBe('parent-post-1');
+      expect(post.author_name).toBe('test-agent');
+      expect(post.team_name).toBe('test-team');
+      expect(post.id).toBeDefined();
+      expect(post.timestamp).toBeDefined();
+    });
+
+    it('should create regular posts when parent_post_id is not provided', async () => {
+      const result = await createPostToolHandler(
+        {
+          content: 'Regular post, not a reply',
+          tags: ['regular'],
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(true);
+      expect(response.post!.parent_post_id).toBeUndefined();
+    });
+
+    it('should validate parent_post_id is not empty string', async () => {
+      const result = await createPostToolHandler(
+        {
+          content: 'Reply with empty parent',
+          parent_post_id: '',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Invalid parent post');
+    });
+
+    it('should handle replies from different team posts correctly', async () => {
+      // Add a post from a different team
+      mockApiClient.addPost({
+        id: 'other-team-post',
+        team_name: 'other-team',
+        author_name: 'other-author',
+        content: 'Post from another team',
+        tags: [],
+        timestamp: new Date().toISOString(),
+      });
+
+      const result = await createPostToolHandler(
+        {
+          content: 'Cross-team reply attempt',
+          parent_post_id: 'other-team-post',
+        },
+        context
+      );
+
+      const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Invalid parent post');
+      expect(response.details).toContain("Parent post with ID 'other-team-post' not found");
+    });
+  });
 });
