@@ -156,7 +156,7 @@ Deliver only changed files or unified diffs.
 
 ---
 
-### Prompt 4 - _List Posts Endpoint_
+### Prompt 4 - _List Posts Endpoint_ ✅
 
 ```text
 # Prompt 4 – Implement GET /v1/teams/{team}/posts with pagination

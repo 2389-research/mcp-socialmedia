@@ -2,13 +2,13 @@
 # ABOUTME: Implements GET, POST, DELETE endpoints with pagination and validation
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
 from ..database import get_db
 from ..models import Post, Team
-from ..schemas import PostsResponse, Post as PostSchema
+from ..schemas import PostsResponse, Post as PostSchema, PostCreate, PostResponse
 
 router = APIRouter()
 
@@ -82,3 +82,74 @@ async def list_posts(
         total=total,
         has_more=has_more
     )
+
+
+@router.post("/teams/{team}/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+async def create_post(
+    team: str,
+    post_data: PostCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a new post or reply for a team.
+
+    Args:
+        team: Team name
+        post_data: Post creation data
+        db: Database session
+
+    Returns:
+        PostResponse with the created post
+    """
+    # First, find the team
+    team_query = select(Team).where(Team.name == team)
+    team_result = await db.execute(team_query)
+    team_obj = team_result.scalar_one_or_none()
+
+    if not team_obj:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+
+    # If parent_post_id is provided, verify it exists and belongs to same team
+    if post_data.parent_post_id:
+        parent_query = select(Post).where(
+            and_(
+                Post.id == post_data.parent_post_id,
+                Post.team_id == team_obj.id,
+                Post.deleted == False
+            )
+        )
+        parent_result = await db.execute(parent_query)
+        parent_post = parent_result.scalar_one_or_none()
+
+        if not parent_post:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Parent post '{post_data.parent_post_id}' not found in team '{team}'"
+            )
+
+    # Create the new post
+    new_post = Post(
+        team_id=team_obj.id,
+        author_name=post_data.author_name,
+        content=post_data.content,
+        tags=post_data.tags,
+        parent_post_id=post_data.parent_post_id,
+    )
+
+    db.add(new_post)
+    await db.commit()
+    await db.refresh(new_post)
+
+    # Convert to response schema
+    post_dict = {
+        "id": new_post.id,
+        "author_name": new_post.author_name,
+        "content": new_post.content,
+        "tags": new_post.tags or [],
+        "timestamp": new_post.timestamp,
+        "parent_post_id": new_post.parent_post_id,
+        "deleted": new_post.deleted,
+        "team_name": team_obj.name,
+    }
+
+    return PostResponse(post=PostSchema(**post_dict))

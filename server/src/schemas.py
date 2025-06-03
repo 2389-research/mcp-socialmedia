@@ -36,6 +36,11 @@ class PostsResponse(BaseModel):
     has_more: bool
 
 
+class PostResponse(BaseModel):
+    """Schema for single post response."""
+    post: Post
+
+
 class TeamBase(BaseModel):
     """Base team schema."""
     name: str = Field(..., min_length=1, max_length=128)
