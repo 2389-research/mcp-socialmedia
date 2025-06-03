@@ -254,7 +254,213 @@ describe('Read Posts Tool', () => {
       expect(fetchPostsSpy).toHaveBeenCalledWith('test-team', {
         limit: 15,
         offset: 5,
+        agent_filter: undefined,
+        tag_filter: undefined,
+        thread_id: undefined,
       });
+    });
+  });
+
+  describe('Filtering functionality', () => {
+    it('should filter posts by agent name', async () => {
+      const result = await readPostsToolHandler({ agent_filter: 'agent-alice' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toBeDefined();
+      expect(response.posts!.length).toBeGreaterThan(0);
+      expect(response.posts!.every(post => post.author_name === 'agent-alice')).toBe(true);
+    });
+
+    it('should filter posts by tag', async () => {
+      const result = await readPostsToolHandler({ tag_filter: 'update' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toBeDefined();
+      expect(response.posts!.length).toBeGreaterThan(0);
+      expect(response.posts!.every(post => post.tags.includes('update'))).toBe(true);
+    });
+
+    it('should filter posts by thread ID', async () => {
+      const result = await readPostsToolHandler({ thread_id: 'post-seed-2' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toBeDefined();
+      expect(response.posts!.length).toBeGreaterThan(0);
+      
+      // Should include the thread parent and its replies
+      const postIds = response.posts!.map(p => p.id);
+      expect(postIds).toContain('post-seed-2');
+      const hasReply = response.posts!.some(p => p.parent_post_id === 'post-seed-2');
+      expect(hasReply).toBe(true);
+    });
+
+    it('should support combined filters', async () => {
+      const result = await readPostsToolHandler({ 
+        agent_filter: 'agent-alice',
+        tag_filter: 'update',
+        limit: 5
+      }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toBeDefined();
+      expect(response.posts!.every(post => 
+        post.author_name === 'agent-alice' && 
+        post.tags.includes('update')
+      )).toBe(true);
+      expect(response.limit).toBe(5);
+    });
+
+    it('should handle filters with no matching posts', async () => {
+      const result = await readPostsToolHandler({ agent_filter: 'non-existent-agent' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toEqual([]);
+      expect(response.error).toBeUndefined();
+    });
+
+    it('should trim filter values', async () => {
+      const fetchPostsSpy = jest.spyOn(mockApiClient, 'fetchPosts');
+      
+      await readPostsToolHandler({ 
+        agent_filter: '  agent-alice  ',
+        tag_filter: ' update ',
+        thread_id: ' post-seed-2 '
+      }, context);
+      
+      expect(fetchPostsSpy).toHaveBeenCalledWith('test-team', {
+        limit: 10,
+        offset: 0,
+        agent_filter: 'agent-alice',
+        tag_filter: 'update',
+        thread_id: 'post-seed-2',
+      });
+    });
+  });
+
+  describe('Parameter validation', () => {
+    it('should reject empty agent_filter', async () => {
+      const result = await readPostsToolHandler({ agent_filter: '' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toEqual([]);
+      expect(response.error).toContain('agent_filter cannot be empty');
+    });
+
+    it('should reject empty tag_filter', async () => {
+      const result = await readPostsToolHandler({ tag_filter: '   ' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toEqual([]);
+      expect(response.error).toContain('tag_filter cannot be empty');
+    });
+
+    it('should reject empty thread_id', async () => {
+      const result = await readPostsToolHandler({ thread_id: '' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toEqual([]);
+      expect(response.error).toContain('thread_id cannot be empty');
+    });
+
+    it('should allow undefined filters', async () => {
+      const result = await readPostsToolHandler({ 
+        agent_filter: undefined,
+        tag_filter: undefined,
+        thread_id: undefined 
+      }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      expect(response.posts).toBeDefined();
+      expect(response.error).toBeUndefined();
+    });
+  });
+
+  describe('Complex filtering scenarios', () => {
+    it('should handle pagination with filters', async () => {
+      // Get first page of alice's posts
+      const page1 = await readPostsToolHandler({ 
+        agent_filter: 'agent-alice',
+        limit: 1,
+        offset: 0 
+      }, context);
+      
+      // Get second page
+      const page2 = await readPostsToolHandler({ 
+        agent_filter: 'agent-alice',
+        limit: 1,
+        offset: 1 
+      }, context);
+      
+      const response1: ReadPostsToolResponse = JSON.parse(page1.content[0].text);
+      const response2: ReadPostsToolResponse = JSON.parse(page2.content[0].text);
+      
+      // Should get different posts
+      if (response1.posts!.length > 0 && response2.posts!.length > 0) {
+        expect(response1.posts![0].id).not.toBe(response2.posts![0].id);
+      }
+    });
+
+    it('should handle multiple tags correctly', async () => {
+      // Add a post with multiple tags
+      mockApiClient.addPost({
+        id: 'multi-tag-post',
+        team_name: 'test-team',
+        author_name: 'agent-test',
+        content: 'Post with multiple tags',
+        tags: ['development', 'update', 'feature'],
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Should find the post when filtering by any of its tags
+      const result = await readPostsToolHandler({ tag_filter: 'feature' }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      const multiTagPost = response.posts!.find(p => p.id === 'multi-tag-post');
+      expect(multiTagPost).toBeDefined();
+    });
+
+    it('should handle thread filtering with nested replies', async () => {
+      // Add nested thread structure
+      const rootId = 'thread-root';
+      const reply1Id = 'thread-reply-1';
+      
+      mockApiClient.addPost({
+        id: rootId,
+        team_name: 'test-team',
+        author_name: 'agent-root',
+        content: 'Root post',
+        tags: ['discussion'],
+        timestamp: new Date(Date.now() - 3000).toISOString(),
+      });
+      
+      mockApiClient.addPost({
+        id: reply1Id,
+        team_name: 'test-team',
+        author_name: 'agent-reply',
+        content: 'Reply to root',
+        tags: ['reply'],
+        timestamp: new Date(Date.now() - 2000).toISOString(),
+        parent_post_id: rootId,
+      });
+      
+      mockApiClient.addPost({
+        id: 'thread-reply-2',
+        team_name: 'test-team',
+        author_name: 'agent-nested',
+        content: 'Reply to reply',
+        tags: ['nested'],
+        timestamp: new Date(Date.now() - 1000).toISOString(),
+        parent_post_id: reply1Id,
+      });
+      
+      // Filter by root thread ID should get root and direct replies
+      const result = await readPostsToolHandler({ thread_id: rootId }, context);
+      
+      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
+      const threadPosts = response.posts!.filter(p => 
+        p.id === rootId || p.parent_post_id === rootId
+      );
+      expect(threadPosts.length).toBeGreaterThanOrEqual(2);
     });
   });
 });
