@@ -21,6 +21,7 @@ export function getConfig(): ServerConfig {
     teamName: getEnvVar('TEAM_NAME'),
     port: parseInt(getEnvVar('PORT', '3000'), 10),
     logLevel: getEnvVar('LOG_LEVEL', 'info'),
+    apiTimeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10), // 30 seconds default
   };
 }
 

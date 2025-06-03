@@ -20,6 +20,8 @@ export default [
         clearInterval: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortController: 'readonly',
       },
     },
     plugins: {

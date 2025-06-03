@@ -6,6 +6,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { config, validateConfig } from './config.js';
 import { SessionManager } from './session-manager.js';
+import { ApiClient } from './api-client.js';
+import { MockApiClient } from './mock-api-client.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -14,6 +16,13 @@ const server = new McpServer({
 
 // Initialize session manager
 const sessionManager = new SessionManager();
+
+// Initialize API client (use mock for development if specified)
+// Will be used by tools in later implementations
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const apiClient = process.env.USE_MOCK_API === 'true' 
+  ? new MockApiClient() 
+  : new ApiClient();
 
 // Store cleanup interval globally for shutdown
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
