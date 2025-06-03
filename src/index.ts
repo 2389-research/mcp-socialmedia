@@ -9,6 +9,7 @@ import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
 import { MockApiClient } from './mock-api-client.js';
 import { loginToolSchema, loginToolHandler } from './tools/login.js';
+import { readPostsToolSchema, readPostsToolHandler } from './tools/read-posts.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -40,27 +41,13 @@ server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
 });
 
 // Register the read_posts tool
-server.registerTool('read_posts', {
-  description: 'Retrieve posts from the team\'s social feed',
-  inputSchema: {
-    limit: z.number().optional().default(10).describe('Maximum number of posts to retrieve'),
-    offset: z.number().optional().default(0).describe('Number of posts to skip'),
-  },
-}, async ({ limit, offset }) => {
-  // Placeholder implementation
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          posts: [],
-          error: 'Not implemented yet',
-          limit,
-          offset,
-        }),
-      },
-    ],
+server.registerTool('read_posts', readPostsToolSchema, async (args, _mcpContext) => {
+  // Create context for the read posts tool
+  const toolContext = {
+    apiClient,
   };
+  
+  return readPostsToolHandler(args, toolContext);
 });
 
 // Register the create_post tool

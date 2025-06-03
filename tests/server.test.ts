@@ -56,7 +56,6 @@ describe('MCP Agent Social Server', () => {
             type: 'text',
             text: JSON.stringify({
               posts: [],
-              error: 'Not implemented yet',
               limit,
               offset,
             }),
@@ -176,7 +175,6 @@ describe('MCP Agent Social Server', () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toMatchObject({
         posts: [],
-        error: 'Not implemented yet',
         limit: 5,
         offset: 0,
       });
