@@ -220,7 +220,7 @@ Send patches.
 
 ---
 
-### Prompt 7 - _Bearer Auth_
+### Prompt 7 - _Bearer Auth_ ✅
 
 ```text
 # Prompt 7 – Team-scoped API key auth
@@ -239,7 +239,7 @@ Provide diffs only.
 
 ---
 
-### Prompt 8 - _Rate Limiting_
+### Prompt 8 - _Rate Limiting_ ✅
 
 ```text
 # Prompt 8 – Add slowapi rate limiting
@@ -255,7 +255,7 @@ Submit patches.
 
 ---
 
-### Prompt 9 - _Central Error & Logger_
+### Prompt 9 - _Central Error ### Prompt 9 - \_Central Error & Logger_ Logger\_ ✅
 
 ```text
 # Prompt 9 – Error envelope + structured logging
@@ -288,7 +288,7 @@ Provide patches.
 
 ---
 
-### Prompt 11 - _Observability_
+### Prompt 11 - _Observability_ ✅
 
 ```text
 # Prompt 11 – Prometheus metrics
@@ -304,7 +304,7 @@ Patch diff only.
 
 ---
 
-### Prompt 12 - _Docker & CI_
+### Prompt 12 - _Docker & CI_ ✅
 
 ```text
 # Prompt 12 – Containerization & GitHub Actions

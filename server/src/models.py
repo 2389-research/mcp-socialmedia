@@ -36,7 +36,9 @@ class Post(Base):
     author_name: Mapped[str] = mapped_column(String(128), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[List[str]] = mapped_column(JSON, default=list)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
     parent_post_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 

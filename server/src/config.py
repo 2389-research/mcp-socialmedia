@@ -14,5 +14,9 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str = "sqlite+aiosqlite:///./app.db"
 
+    # Logging configuration
+    log_level: str = "INFO"
+    structured_logging: bool = True
+
 
 settings = Settings()

@@ -47,10 +47,7 @@ async def test_create_post(db_session):
 
     # Then create a post
     post = Post(
-        team_id=team.id,
-        author_name="alice",
-        content="Hello world!",
-        tags=["greeting", "test"]
+        team_id=team.id, author_name="alice", content="Hello world!", tags=["greeting", "test"]
     )
     db_session.add(post)
     await db_session.commit()

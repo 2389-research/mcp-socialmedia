@@ -43,7 +43,7 @@ async def setup_test_data():
             author_name="deleted-author",
             content="This post should not appear",
             tags=["deleted"],
-            deleted=True
+            deleted=True,
         )
         session.add(deleted_post)
 

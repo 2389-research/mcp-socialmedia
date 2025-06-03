@@ -1,0 +1,58 @@
+# ABOUTME: Docker Compose configuration for MCP Social Media API
+# ABOUTME: Defines API service with environment variables and persistent volume for SQLite
+
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: mcp-social-api
+    ports:
+      - '8000:8000'
+    environment:
+      # Server configuration
+      - PORT=8000
+      - BUILD_SHA=${BUILD_SHA:-docker-compose}
+
+      # Database configuration
+      - DATABASE_URL=sqlite:///app/data/social_media.db
+
+      # Logging configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - STRUCTURED_LOGGING=${STRUCTURED_LOGGING:-true}
+
+      # Development/production settings
+      - DEBUG=${DEBUG:-false}
+
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+      # Persist application logs
+      - ./logs:/app/logs
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/healthz']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+volumes:
+  # Named volume for database persistence (alternative to bind mount)
+  db_data:
+    driver: local
