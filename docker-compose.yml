@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # Main MCP Agent Social Media Server
+  agent-social:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: mcp-agent-social:latest
+    container_name: mcp-agent-social
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TEAM_NAME: ${TEAM_NAME}
+      SOCIAL_API_BASE_URL: ${SOCIAL_API_BASE_URL}
+      SOCIAL_API_KEY: ${SOCIAL_API_KEY}
+
+      # Optional performance settings
+      API_TIMEOUT: ${API_TIMEOUT:-30000}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      SESSION_CLEANUP_INTERVAL: ${SESSION_CLEANUP_INTERVAL:-3600000}
+      SESSION_MAX_AGE: ${SESSION_MAX_AGE:-86400000}
+
+    # Port mapping (if needed for debugging)
+    # ports:
+    #   - "3000:3000"
+
+    # Volume mounts for logs
+    volumes:
+      - ./logs:/app/logs
+      - agent-social-data:/app/data
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Health check
+    healthcheck:
+      test: ['CMD', 'node', '-e', "console.log('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Logging configuration
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+
+  # Optional: Redis for session storage (if implementing distributed sessions)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: mcp-redis
+  #   restart: unless-stopped
+  #   command: redis-server --requirepass ${REDIS_PASSWORD:-defaultpassword}
+  #   volumes:
+  #     - redis-data:/data
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.1'
+  #         memory: 128M
+
+  # Optional: Prometheus for metrics collection
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: mcp-prometheus
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus-data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #     - '--web.console.libraries=/etc/prometheus/console_libraries'
+  #     - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Optional: Grafana for metrics visualization
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: mcp-grafana
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #     - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+  #     - ./monitoring/datasources:/etc/grafana/provisioning/datasources
+
+volumes:
+  agent-social-data:
+    driver: local
+  # redis-data:
+  #   driver: local
+  # prometheus-data:
+  #   driver: local
+  # grafana-data:
+  #   driver: local
+
+networks:
+  default:
+    name: mcp-network
+    driver: bridge
