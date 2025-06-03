@@ -201,7 +201,7 @@ Return only diffs.
 
 ---
 
-### Prompt 6 - _Fetch & Delete_
+### Prompt 6 - _Fetch & Delete_ ✅
 
 ```text
 # Prompt 6 – GET and DELETE single post
