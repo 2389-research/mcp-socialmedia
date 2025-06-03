@@ -179,7 +179,7 @@ Provide patches.
 
 ---
 
-### Prompt 5 - _Create Post Endpoint_
+### Prompt 5 - _Create Post Endpoint_ ✅
 
 ```text
 # Prompt 5 – Implement POST /v1/teams/{team}/posts

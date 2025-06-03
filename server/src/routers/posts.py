@@ -153,3 +153,109 @@ async def create_post(
     }
 
     return PostResponse(post=PostSchema(**post_dict))
+
+
+@router.get("/teams/{team}/posts/{post_id}", response_model=PostResponse)
+async def get_post(
+    team: str,
+    post_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get a single post by ID within a team.
+    
+    Args:
+        team: Team name
+        post_id: Post ID to retrieve
+        db: Database session
+    
+    Returns:
+        PostResponse with the requested post
+    """
+    # First, find the team
+    team_query = select(Team).where(Team.name == team)
+    team_result = await db.execute(team_query)
+    team_obj = team_result.scalar_one_or_none()
+    
+    if not team_obj:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+    
+    # Find the post
+    post_query = select(Post).where(
+        and_(
+            Post.id == post_id,
+            Post.team_id == team_obj.id,
+            Post.deleted == False
+        )
+    )
+    post_result = await db.execute(post_query)
+    post = post_result.scalar_one_or_none()
+    
+    if not post:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Post '{post_id}' not found in team '{team}'"
+        )
+    
+    # Convert to response schema
+    post_dict = {
+        "id": post.id,
+        "author_name": post.author_name,
+        "content": post.content,
+        "tags": post.tags or [],
+        "timestamp": post.timestamp,
+        "parent_post_id": post.parent_post_id,
+        "deleted": post.deleted,
+        "team_name": team_obj.name,
+    }
+    
+    return PostResponse(post=PostSchema(**post_dict))
+
+
+@router.delete("/teams/{team}/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_post(
+    team: str,
+    post_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Soft delete a post by setting deleted=True.
+    
+    Args:
+        team: Team name
+        post_id: Post ID to delete
+        db: Database session
+    
+    Returns:
+        204 No Content on successful deletion
+    """
+    # First, find the team
+    team_query = select(Team).where(Team.name == team)
+    team_result = await db.execute(team_query)
+    team_obj = team_result.scalar_one_or_none()
+    
+    if not team_obj:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+    
+    # Find the post
+    post_query = select(Post).where(
+        and_(
+            Post.id == post_id,
+            Post.team_id == team_obj.id,
+            Post.deleted == False
+        )
+    )
+    post_result = await db.execute(post_query)
+    post = post_result.scalar_one_or_none()
+    
+    if not post:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Post '{post_id}' not found in team '{team}'"
+        )
+    
+    # Soft delete the post
+    post.deleted = True
+    await db.commit()
+    
+    # Return 204 No Content (FastAPI handles this automatically)
