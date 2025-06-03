@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { SessionManager } from '../session-manager.js';
 import { LoginToolResponse } from '../types.js';
 import { config } from '../config.js';
+import { logger } from '../logger.js';
+import { withMetrics } from '../metrics.js';
 
 export const loginToolSchema = {
   description: 'Authenticate and set agent identity for the session',
@@ -25,41 +27,101 @@ export async function loginToolHandler(
   { agent_name }: { agent_name: string },
   context: LoginToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  try {
-    // Validate agent_name
-    if (!agent_name || agent_name.trim().length === 0) {
-      const response: LoginToolResponse = {
-        success: false,
-        error: 'Invalid input',
-        details: 'Agent name must not be empty',
-      };
+  const startTime = Date.now();
+  const sessionId = context.getSessionId();
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(response),
-          },
-        ],
-      };
-    }
+  logger.toolStart('login', { agent_name }, { sessionId });
 
-    // Get or generate session ID
-    const sessionId = context.getSessionId();
+  return withMetrics('login', async () => {
+    try {
+      // Validate agent_name
+      if (!agent_name || agent_name.trim().length === 0) {
+        const response: LoginToolResponse = {
+          success: false,
+          error: 'Invalid input',
+          details: 'Agent name must not be empty',
+        };
 
-    // Check if session already exists (re-login scenario)
-    const existingSession = context.sessionManager.getSession(sessionId);
+        logger.warn('Login failed - invalid agent name', { sessionId, reason: 'empty_name' });
 
-    if (existingSession) {
-      // Update existing session
-      await context.sessionManager.createSession(sessionId, agent_name.trim());
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response),
+            },
+          ],
+        };
+      }
+
+      // Check if session already exists (re-login scenario)
+      const existingSession = context.sessionManager.getSession(sessionId);
+
+      if (existingSession) {
+        // Update existing session
+        await context.sessionManager.createSession(sessionId, agent_name.trim());
+
+        const response: LoginToolResponse = {
+          success: true,
+          agent_name: agent_name.trim(),
+          team_name: config.teamName,
+          session_id: sessionId,
+        };
+
+        logger.info('Re-login successful', {
+          sessionId,
+          agentName: agent_name.trim(),
+          previousAgent: existingSession.agentName,
+        });
+
+        logger.toolSuccess('login', Date.now() - startTime, {
+          sessionId,
+          agentName: agent_name.trim(),
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response),
+            },
+          ],
+        };
+      }
+
+      // Create new session
+      const session = await context.sessionManager.createSession(sessionId, agent_name.trim());
+
+      logger.sessionCreated(sessionId, agent_name.trim());
 
       const response: LoginToolResponse = {
         success: true,
-        agent_name: agent_name.trim(),
+        agent_name: session.agentName,
         team_name: config.teamName,
-        session_id: sessionId,
+        session_id: session.sessionId,
       };
+
+      logger.toolSuccess('login', Date.now() - startTime, {
+        sessionId,
+        agentName: session.agentName,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(response),
+          },
+        ],
+      };
+    } catch (error) {
+      const response: LoginToolResponse = {
+        success: false,
+        error: 'Failed to create session',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      };
+
+      logger.toolError('login', error as Error, Date.now() - startTime, { sessionId });
 
       return {
         content: [
@@ -70,39 +132,5 @@ export async function loginToolHandler(
         ],
       };
     }
-
-    // Create new session
-    const session = await context.sessionManager.createSession(sessionId, agent_name.trim());
-
-    const response: LoginToolResponse = {
-      success: true,
-      agent_name: session.agentName,
-      team_name: config.teamName,
-      session_id: session.sessionId,
-    };
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response),
-        },
-      ],
-    };
-  } catch (error) {
-    const response: LoginToolResponse = {
-      success: false,
-      error: 'Failed to create session',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    };
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response),
-        },
-      ],
-    };
-  }
+  });
 }

@@ -1,0 +1,374 @@
+// ABOUTME: End-to-end integration tests for complete workflows
+// ABOUTME: Tests full agent interactions including login, posting, and replies
+
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SessionManager } from '../../src/session-manager.js';
+import { MockApiClient } from '../../src/mock-api-client.js';
+import { loginToolHandler } from '../../src/tools/login.js';
+import { readPostsToolHandler } from '../../src/tools/read-posts.js';
+import { createPostToolHandler } from '../../src/tools/create-post.js';
+import { logger } from '../../src/logger.js';
+import { metrics } from '../../src/metrics.js';
+
+describe('End-to-End Integration Tests', () => {
+  let sessionManager: SessionManager;
+  let apiClient: MockApiClient;
+  let sessionId: string;
+
+  beforeEach(() => {
+    // Reset environment
+    process.env.TEAM_NAME = 'test-team';
+    process.env.LOG_LEVEL = 'DEBUG';
+
+    // Initialize components
+    sessionManager = new SessionManager();
+    apiClient = new MockApiClient();
+    sessionId = `test-session-${Date.now()}`;
+
+    // Reset metrics
+    metrics.reset();
+  });
+
+  afterEach(() => {
+    // Clean up
+    sessionManager.clearAllSessions();
+  });
+
+  describe('Complete Agent Workflow', () => {
+    it('should handle complete workflow: login → read → create → read updated', async () => {
+      logger.info('Starting complete agent workflow test');
+
+      // Step 1: Login
+      const loginContext = {
+        sessionManager,
+        getSessionId: () => sessionId,
+      };
+
+      const loginResult = await loginToolHandler({ agent_name: 'test-agent' }, loginContext);
+
+      const loginResponse = JSON.parse(loginResult.content[0].text);
+      expect(loginResponse.success).toBe(true);
+      expect(loginResponse.agent_name).toBe('test-agent');
+      logger.info('Login successful', { agent_name: 'test-agent' });
+
+      // Step 2: Read initial posts
+      const readContext = {
+        apiClient,
+      };
+
+      const initialReadResult = await readPostsToolHandler({}, readContext);
+      const initialPosts = JSON.parse(initialReadResult.content[0].text);
+      expect(initialPosts.posts).toBeDefined();
+      const initialPostCount = initialPosts.posts.length;
+      logger.info('Initial post count', { count: initialPostCount });
+
+      // Step 3: Create a new post
+      const createContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessionId,
+      };
+
+      const createResult = await createPostToolHandler(
+        {
+          content: 'Integration test post',
+          tags: ['test', 'integration'],
+        },
+        createContext
+      );
+
+      const createResponse = JSON.parse(createResult.content[0].text);
+      expect(createResponse.success).toBe(true);
+      expect(createResponse.post).toBeDefined();
+      const newPostId = createResponse.post.id;
+      logger.info('Post created', { postId: newPostId });
+
+      // Step 4: Read updated feed
+      const updatedReadResult = await readPostsToolHandler({}, readContext);
+      const updatedPosts = JSON.parse(updatedReadResult.content[0].text);
+      expect(updatedPosts.posts.length).toBe(initialPostCount + 1);
+
+      // Verify our post is in the feed
+      const ourPost = updatedPosts.posts.find((p: any) => p.id === newPostId);
+      expect(ourPost).toBeDefined();
+      expect(ourPost.content).toBe('Integration test post');
+      expect(ourPost.author_name).toBe('test-agent');
+      logger.info('Post verified in feed');
+    });
+  });
+
+  describe('Reply Workflow', () => {
+    it('should handle reply workflow: login → read → create reply → verify threading', async () => {
+      logger.info('Starting reply workflow test');
+
+      // Setup: Add a parent post
+      const parentPost = {
+        id: 'parent-post-integration',
+        team_name: 'test-team',
+        author_name: 'other-agent',
+        content: 'Parent post for replies',
+        tags: ['discussion'],
+        timestamp: new Date().toISOString(),
+      };
+      apiClient.addPost(parentPost);
+
+      // Step 1: Login
+      const loginContext = {
+        sessionManager,
+        getSessionId: () => sessionId,
+      };
+
+      await loginToolHandler({ agent_name: 'reply-agent' }, loginContext);
+
+      // Step 2: Read posts to find parent
+      const readContext = {
+        apiClient,
+      };
+
+      const readResult = await readPostsToolHandler({}, readContext);
+      const posts = JSON.parse(readResult.content[0].text);
+      const foundParent = posts.posts.find((p: any) => p.id === parentPost.id);
+      expect(foundParent).toBeDefined();
+
+      // Step 3: Create reply
+      const createContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessionId,
+      };
+
+      const replyResult = await createPostToolHandler(
+        {
+          content: 'This is a reply to the parent post',
+          parent_post_id: parentPost.id,
+        },
+        createContext
+      );
+
+      const replyResponse = JSON.parse(replyResult.content[0].text);
+      expect(replyResponse.success).toBe(true);
+      expect(replyResponse.post.parent_post_id).toBe(parentPost.id);
+      const replyId = replyResponse.post.id;
+
+      // Step 4: Verify threading with thread_id filter
+      const threadResult = await readPostsToolHandler({ thread_id: parentPost.id }, readContext);
+
+      const threadPosts = JSON.parse(threadResult.content[0].text);
+      expect(threadPosts.posts.length).toBeGreaterThanOrEqual(2);
+
+      // Should include both parent and reply
+      const hasParent = threadPosts.posts.some((p: any) => p.id === parentPost.id);
+      const hasReply = threadPosts.posts.some((p: any) => p.id === replyId);
+      expect(hasParent).toBe(true);
+      expect(hasReply).toBe(true);
+
+      logger.info('Reply thread verified', {
+        parentId: parentPost.id,
+        replyId,
+        threadSize: threadPosts.posts.length,
+      });
+    });
+  });
+
+  describe('Error Scenarios', () => {
+    it('should handle API failures gracefully', async () => {
+      logger.info('Testing API failure handling');
+
+      // Login first
+      const loginContext = {
+        sessionManager,
+        getSessionId: () => sessionId,
+      };
+      await loginToolHandler({ agent_name: 'error-test-agent' }, loginContext);
+
+      // Simulate API failure
+      apiClient.setNetworkFailure(true);
+
+      // Try to create post
+      const createContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessionId,
+      };
+
+      const result = await createPostToolHandler({ content: 'This should fail' }, createContext);
+
+      const response = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Failed to create post');
+      logger.warn('API failure handled correctly');
+
+      // Reset API
+      apiClient.setNetworkFailure(false);
+    });
+
+    it('should enforce session requirements', async () => {
+      logger.info('Testing session validation');
+
+      // Try to create post without login
+      const createContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => 'no-session',
+      };
+
+      const result = await createPostToolHandler({ content: 'Unauthorized post' }, createContext);
+
+      const response = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Authentication required');
+      logger.info('Session validation working correctly');
+    });
+  });
+
+  describe('Multi-Agent Scenarios', () => {
+    it('should handle multiple agents posting and reading', async () => {
+      logger.info('Testing multi-agent scenario');
+
+      const agents = ['alice', 'bob', 'charlie'];
+      const sessions: Record<string, string> = {};
+
+      // All agents login
+      for (const agent of agents) {
+        const agentSessionId = `session-${agent}`;
+        sessions[agent] = agentSessionId;
+
+        const loginContext = {
+          sessionManager,
+          getSessionId: () => agentSessionId,
+        };
+
+        await loginToolHandler({ agent_name: agent }, loginContext);
+        logger.debug(`Agent ${agent} logged in`);
+      }
+
+      // Each agent creates a post
+      const postIds: string[] = [];
+      for (const agent of agents) {
+        const createContext = {
+          sessionManager,
+          apiClient,
+          getSessionId: () => sessions[agent],
+        };
+
+        const result = await createPostToolHandler(
+          {
+            content: `Post from ${agent}`,
+            tags: [agent, 'multi-agent-test'],
+          },
+          createContext
+        );
+
+        const response = JSON.parse(result.content[0].text);
+        expect(response.success).toBe(true);
+        postIds.push(response.post.id);
+        logger.debug(`Agent ${agent} created post ${response.post.id}`);
+      }
+
+      // Read all posts with agent filter
+      const readContext = {
+        apiClient,
+      };
+
+      for (const agent of agents) {
+        const result = await readPostsToolHandler({ agent_filter: agent }, readContext);
+
+        const response = JSON.parse(result.content[0].text);
+        const agentPosts = response.posts.filter((p: any) => p.author_name === agent);
+        expect(agentPosts.length).toBeGreaterThanOrEqual(1);
+        logger.debug(`Found ${agentPosts.length} posts by ${agent}`);
+      }
+
+      // Create a conversation thread
+      const alicePost = postIds[0];
+
+      // Bob replies to Alice
+      const bobReplyContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessions.bob,
+      };
+
+      const bobReply = await createPostToolHandler(
+        {
+          content: 'Reply from Bob to Alice',
+          parent_post_id: alicePost,
+        },
+        bobReplyContext
+      );
+
+      const bobReplyResponse = JSON.parse(bobReply.content[0].text);
+      expect(bobReplyResponse.success).toBe(true);
+
+      // Charlie replies to Bob's reply
+      const charlieReplyContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessions.charlie,
+      };
+
+      const charlieReply = await createPostToolHandler(
+        {
+          content: 'Reply from Charlie to Bob',
+          parent_post_id: bobReplyResponse.post.id,
+        },
+        charlieReplyContext
+      );
+
+      const charlieReplyResponse = JSON.parse(charlieReply.content[0].text);
+      expect(charlieReplyResponse.success).toBe(true);
+
+      logger.info('Multi-agent conversation created successfully');
+    });
+  });
+
+  describe('Performance Monitoring', () => {
+    it('should track operation metrics', async () => {
+      logger.info('Testing performance monitoring');
+
+      // Reset metrics to ensure clean state
+      metrics.reset();
+
+      // Perform several operations
+      const loginContext = {
+        sessionManager,
+        getSessionId: () => sessionId,
+      };
+
+      // Login - the handler already tracks metrics internally
+      await loginToolHandler({ agent_name: 'metrics-agent' }, loginContext);
+
+      // Create posts
+      const createContext = {
+        sessionManager,
+        apiClient,
+        getSessionId: () => sessionId,
+      };
+
+      for (let i = 0; i < 5; i++) {
+        await createPostToolHandler({ content: `Performance test post ${i}` }, createContext);
+      }
+
+      // Read posts
+      const readContext = {
+        apiClient,
+      };
+
+      await readPostsToolHandler({ limit: 20 }, readContext);
+
+      // Check metrics
+      const loginMetrics = metrics.getOperationMetrics('login');
+      expect(loginMetrics).toBeDefined();
+      expect(loginMetrics!.count).toBe(1);
+      expect(loginMetrics!.errors).toBe(0);
+
+      const systemMetrics = metrics.getSystemMetrics();
+      expect(systemMetrics.uptime).toBeGreaterThanOrEqual(0);
+      expect(systemMetrics.memoryUsage).toBeDefined();
+      expect(systemMetrics.memoryUsage.rss).toBeGreaterThan(0);
+
+      logger.info('Metrics summary:\n' + metrics.getSummary());
+    });
+  });
+});
