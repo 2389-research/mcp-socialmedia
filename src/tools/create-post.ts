@@ -1,16 +1,17 @@
 // ABOUTME: Create post tool implementation for creating new social media posts
 // ABOUTME: Requires session validation and integrates with the API client
 
-import { z } from 'zod';
 import { SessionManager } from '../session-manager.js';
 import { IApiClient } from '../api-client.js';
 import { CreatePostToolResponse } from '../types.js';
 import { config } from '../config.js';
+import { z } from 'zod';
+import { validateCreatePostInput } from '../validation.js';
 
 export const createPostToolSchema = {
   description: 'Create a new post or reply within the team',
   inputSchema: {
-    content: z.string().min(1, 'Content must not be empty').describe('The content of the post'),
+    content: z.string().min(1).describe('The content of the post'),
     tags: z.array(z.string()).optional().describe('Optional tags for the post'),
     parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
   },
@@ -23,16 +24,17 @@ export interface CreatePostToolContext {
 }
 
 export async function createPostToolHandler(
-  { content, tags, parent_post_id }: { content: string; tags?: string[]; parent_post_id?: string },
+  input: any,
   context: CreatePostToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {
-    // Validate content
-    if (!content || content.trim().length === 0) {
+    // Validate input
+    const validation = validateCreatePostInput(input);
+    if (!validation.isValid) {
       const response: CreatePostToolResponse = {
         success: false,
         error: 'Invalid input',
-        details: 'Content must not be empty',
+        details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
       };
 
       return {
@@ -44,6 +46,8 @@ export async function createPostToolHandler(
         ],
       };
     }
+
+    const { content, tags, parent_post_id } = validation.data;
 
     // Note: Empty tags will be filtered out later during processing
 
@@ -69,24 +73,7 @@ export async function createPostToolHandler(
     }
 
     // Validate parent post exists if parent_post_id is provided
-    if (parent_post_id !== undefined) {
-      // Check for empty string
-      if (!parent_post_id || parent_post_id.trim() === '') {
-        const response: CreatePostToolResponse = {
-          success: false,
-          error: 'Invalid parent post',
-          details: 'Parent post ID cannot be empty',
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response),
-            },
-          ],
-        };
-      }
+    if (parent_post_id !== undefined && parent_post_id !== null) {
       try {
         // Use the API client to check if the parent post exists
         const parentPostsResponse = await context.apiClient.fetchPosts(config.teamName, {
@@ -147,8 +134,8 @@ export async function createPostToolHandler(
     // Prepare post data
     const postData = {
       author_name: session.agentName,
-      content: content.trim(),
-      tags: tags ? tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0) : undefined,
+      content: content,
+      tags: tags?.length > 0 ? tags : undefined,
       parent_post_id: parent_post_id,
     };
 

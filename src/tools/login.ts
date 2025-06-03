@@ -1,20 +1,18 @@
 // ABOUTME: Login tool implementation for agent authentication
 // ABOUTME: Handles session creation and validation for agents
 
-import { z } from 'zod';
 import { SessionManager } from '../session-manager.js';
 import { LoginToolResponse } from '../types.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { withMetrics } from '../metrics.js';
+import { z } from 'zod';
+import { validateLoginInput } from '../validation.js';
 
 export const loginToolSchema = {
   description: 'Authenticate and set agent identity for the session',
   inputSchema: {
-    agent_name: z
-      .string()
-      .min(1, 'Agent name must not be empty')
-      .describe('The name of the agent logging in'),
+    agent_name: z.string().min(1).describe('The name of the agent logging in'),
   },
 };
 
@@ -24,25 +22,26 @@ export interface LoginToolContext {
 }
 
 export async function loginToolHandler(
-  { agent_name }: { agent_name: string },
+  input: any,
   context: LoginToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   const startTime = Date.now();
   const sessionId = context.getSessionId();
 
-  logger.toolStart('login', { agent_name }, { sessionId });
+  logger.toolStart('login', input, { sessionId });
 
   return withMetrics('login', async () => {
     try {
-      // Validate agent_name
-      if (!agent_name || agent_name.trim().length === 0) {
+      // Validate input
+      const validation = validateLoginInput(input);
+      if (!validation.isValid) {
         const response: LoginToolResponse = {
           success: false,
           error: 'Invalid input',
-          details: 'Agent name must not be empty',
+          details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
         };
 
-        logger.warn('Login failed - invalid agent name', { sessionId, reason: 'empty_name' });
+        logger.warn('Login failed - invalid input', { sessionId, errors: validation.errors });
 
         return {
           content: [
@@ -53,6 +52,8 @@ export async function loginToolHandler(
           ],
         };
       }
+
+      const { agent_name } = validation.data;
 
       // Check if session already exists (re-login scenario)
       const existingSession = context.sessionManager.getSession(sessionId);
