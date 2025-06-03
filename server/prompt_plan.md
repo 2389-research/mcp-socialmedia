@@ -97,7 +97,7 @@ Provide the full files (or patches) needed for all steps. Stop when the tests pa
 
 ---
 
-### Prompt 2 - _FastAPI Skeleton_
+### Prompt 2 - _FastAPI Skeleton_ ✅
 
 ```text
 # Prompt 2 – Minimal FastAPI server with health check
