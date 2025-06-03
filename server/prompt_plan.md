@@ -124,7 +124,7 @@ Return patches only. Do not include compiled output.
 
 ---
 
-### Prompt 3 - _SQLAlchemy Init & Models_
+### Prompt 3 - _SQLAlchemy Init & Models_ ✅
 
 ```text
 # Prompt 3 – Add SQLAlchemy and initial DB schema

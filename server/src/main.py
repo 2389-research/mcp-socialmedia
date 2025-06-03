@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from .config import settings
+from .routers import posts
+from .database import init_db
 
 app = FastAPI(
     title="MCP Social Media API",
@@ -24,6 +26,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers
+app.include_router(posts.router, prefix="/v1", tags=["posts"])
+
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
 
 @app.get("/v1/healthz")
 async def health_check():
