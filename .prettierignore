@@ -1,0 +1,9 @@
+dist/
+build/
+node_modules/
+coverage/
+*.min.js
+*.log
+.git/
+.cache/
+tmp/

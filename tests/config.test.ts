@@ -21,7 +21,7 @@ describe('Config', () => {
       process.env.SOCIAL_API_KEY = 'test-key';
       process.env.TEAM_NAME = 'test-team';
       process.env.PORT = '3000';
-      
+
       expect(() => validateConfig()).not.toThrow();
     });
 
@@ -29,23 +29,27 @@ describe('Config', () => {
       delete process.env.SOCIAL_API_BASE_URL;
       process.env.SOCIAL_API_KEY = 'test-key';
       process.env.TEAM_NAME = 'test-team';
-      
-      expect(() => validateConfig()).toThrow('Missing required environment variable: SOCIAL_API_BASE_URL');
+
+      expect(() => validateConfig()).toThrow(
+        'Missing required environment variable: SOCIAL_API_BASE_URL'
+      );
     });
 
     it('should throw error for missing SOCIAL_API_KEY', () => {
       process.env.SOCIAL_API_BASE_URL = 'https://api.example.com';
       delete process.env.SOCIAL_API_KEY;
       process.env.TEAM_NAME = 'test-team';
-      
-      expect(() => validateConfig()).toThrow('Missing required environment variable: SOCIAL_API_KEY');
+
+      expect(() => validateConfig()).toThrow(
+        'Missing required environment variable: SOCIAL_API_KEY'
+      );
     });
 
     it('should throw error for missing TEAM_NAME', () => {
       process.env.SOCIAL_API_BASE_URL = 'https://api.example.com';
       process.env.SOCIAL_API_KEY = 'test-key';
       delete process.env.TEAM_NAME;
-      
+
       expect(() => validateConfig()).toThrow('Missing required environment variable: TEAM_NAME');
     });
 
@@ -54,7 +58,7 @@ describe('Config', () => {
       process.env.SOCIAL_API_KEY = 'test-key';
       process.env.TEAM_NAME = 'test-team';
       process.env.PORT = '70000';
-      
+
       expect(() => validateConfig()).toThrow('PORT must be a valid port number');
     });
 
@@ -63,7 +67,7 @@ describe('Config', () => {
       process.env.SOCIAL_API_KEY = 'test-key';
       process.env.TEAM_NAME = 'test-team';
       delete process.env.PORT;
-      
+
       const config = getConfig();
       expect(config.port).toBe(3000);
     });
@@ -73,7 +77,7 @@ describe('Config', () => {
       process.env.SOCIAL_API_KEY = 'test-key';
       process.env.TEAM_NAME = 'test-team';
       delete process.env.LOG_LEVEL;
-      
+
       const config = getConfig();
       expect(config.logLevel).toBe('info');
     });

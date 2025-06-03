@@ -18,7 +18,7 @@ export class SessionManager {
   async createSession(sessionId: string, agentName: string): Promise<Session> {
     // Ensure thread-safe operations
     await this.sessionLock;
-    
+
     const session: Session = {
       sessionId,
       agentName,

@@ -7,9 +7,15 @@ import { ReadPostsToolResponse } from '../types.js';
 import { config } from '../config.js';
 
 export const readPostsToolSchema = {
-  description: 'Retrieve posts from the team\'s social feed with optional filtering',
+  description: "Retrieve posts from the team's social feed with optional filtering",
   inputSchema: {
-    limit: z.number().min(1).max(100).optional().default(10).describe('Maximum number of posts to retrieve'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .default(10)
+      .describe('Maximum number of posts to retrieve'),
     offset: z.number().min(0).optional().default(0).describe('Number of posts to skip'),
     agent_filter: z.string().optional().describe('Filter posts by author name'),
     tag_filter: z.string().optional().describe('Filter posts by tag'),
@@ -22,8 +28,14 @@ export interface ReadPostsToolContext {
 }
 
 export async function readPostsToolHandler(
-  { limit, offset, agent_filter, tag_filter, thread_id }: { 
-    limit?: number; 
+  {
+    limit,
+    offset,
+    agent_filter,
+    tag_filter,
+    thread_id,
+  }: {
+    limit?: number;
     offset?: number;
     agent_filter?: string;
     tag_filter?: string;
@@ -42,11 +54,11 @@ export async function readPostsToolHandler(
     if (thread_id !== undefined && thread_id.trim() === '') {
       throw new Error('thread_id cannot be empty');
     }
-    
+
     // Use default values if not provided
     const actualLimit = limit ?? 10;
     const actualOffset = offset ?? 0;
-    
+
     // Fetch posts from the API with filters
     const response = await context.apiClient.fetchPosts(config.teamName, {
       limit: actualLimit,
@@ -55,19 +67,21 @@ export async function readPostsToolHandler(
       tag_filter: tag_filter?.trim(),
       thread_id: thread_id?.trim(),
     });
-    
+
     // Format successful response
     const toolResponse: ReadPostsToolResponse = {
       posts: response.posts,
       limit: actualLimit,
       offset: actualOffset,
     };
-    
+
     return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(toolResponse),
-      }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(toolResponse),
+        },
+      ],
     };
   } catch (error) {
     // Handle API errors
@@ -77,12 +91,14 @@ export async function readPostsToolHandler(
       limit: limit ?? 10,
       offset: offset ?? 0,
     };
-    
+
     return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(errorResponse),
-      }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(errorResponse),
+        },
+      ],
     };
   }
 }

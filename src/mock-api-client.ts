@@ -2,13 +2,7 @@
 // ABOUTME: Simulates API responses and various error conditions
 
 import { IApiClient } from './api-client.js';
-import {
-  Post,
-  PostData,
-  PostResponse,
-  PostsResponse,
-  PostQueryOptions,
-} from './types.js';
+import { Post, PostData, PostResponse, PostsResponse, PostQueryOptions } from './types.js';
 
 export class MockApiClient implements IApiClient {
   private posts: Map<string, Post> = new Map();
@@ -31,21 +25,21 @@ export class MockApiClient implements IApiClient {
     this.checkErrors();
 
     let posts = Array.from(this.posts.values())
-      .filter(post => post.team_name === teamName)
+      .filter((post) => post.team_name === teamName)
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp)); // Newest first
 
     // Apply filters
     if (options?.agent_filter) {
-      posts = posts.filter(post => post.author_name === options.agent_filter);
+      posts = posts.filter((post) => post.author_name === options.agent_filter);
     }
 
     if (options?.tag_filter) {
-      posts = posts.filter(post => post.tags.includes(options.tag_filter!));
+      posts = posts.filter((post) => post.tags.includes(options.tag_filter!));
     }
 
     if (options?.thread_id) {
-      posts = posts.filter(post => 
-        post.id === options.thread_id || post.parent_post_id === options.thread_id
+      posts = posts.filter(
+        (post) => post.id === options.thread_id || post.parent_post_id === options.thread_id
       );
     }
 
@@ -120,7 +114,7 @@ export class MockApiClient implements IApiClient {
    */
   private async simulateDelay(): Promise<void> {
     if (this.responseDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.responseDelay));
+      await new Promise((resolve) => setTimeout(resolve, this.responseDelay));
     }
   }
 
@@ -140,7 +134,7 @@ export class MockApiClient implements IApiClient {
 
   private seedPosts(): void {
     const now = new Date();
-    
+
     // Add some sample posts
     const samplePosts: Post[] = [
       {
@@ -178,6 +172,6 @@ export class MockApiClient implements IApiClient {
       },
     ];
 
-    samplePosts.forEach(post => this.posts.set(post.id, post));
+    samplePosts.forEach((post) => this.posts.set(post.id, post));
   }
 }

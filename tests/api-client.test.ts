@@ -16,7 +16,7 @@ describe('MockApiClient', () => {
   describe('fetchPosts', () => {
     it('should fetch posts for a team', async () => {
       const response = await mockClient.fetchPosts('test-team');
-      
+
       expect(response.posts).toBeDefined();
       expect(response.posts.length).toBeGreaterThan(0);
       expect(response.total).toBeGreaterThan(0);
@@ -26,30 +26,32 @@ describe('MockApiClient', () => {
     it('should filter posts by agent', async () => {
       const options: PostQueryOptions = { agent_filter: 'agent-alice' };
       const response = await mockClient.fetchPosts('test-team', options);
-      
-      expect(response.posts.every(post => post.author_name === 'agent-alice')).toBe(true);
+
+      expect(response.posts.every((post) => post.author_name === 'agent-alice')).toBe(true);
     });
 
     it('should filter posts by tag', async () => {
       const options: PostQueryOptions = { tag_filter: 'update' };
       const response = await mockClient.fetchPosts('test-team', options);
-      
-      expect(response.posts.every(post => post.tags.includes('update'))).toBe(true);
+
+      expect(response.posts.every((post) => post.tags.includes('update'))).toBe(true);
     });
 
     it('should filter posts by thread', async () => {
       const options: PostQueryOptions = { thread_id: 'post-seed-2' };
       const response = await mockClient.fetchPosts('test-team', options);
-      
-      expect(response.posts.some(post => 
-        post.id === 'post-seed-2' || post.parent_post_id === 'post-seed-2'
-      )).toBe(true);
+
+      expect(
+        response.posts.some(
+          (post) => post.id === 'post-seed-2' || post.parent_post_id === 'post-seed-2'
+        )
+      ).toBe(true);
     });
 
     it('should handle pagination', async () => {
       const page1 = await mockClient.fetchPosts('test-team', { limit: 2, offset: 0 });
       const page2 = await mockClient.fetchPosts('test-team', { limit: 2, offset: 2 });
-      
+
       expect(page1.posts.length).toBeLessThanOrEqual(2);
       expect(page2.posts.length).toBeLessThanOrEqual(2);
       expect(page1.posts[0].id).not.toBe(page2.posts[0]?.id);
@@ -57,7 +59,7 @@ describe('MockApiClient', () => {
 
     it('should return empty array for non-existent team', async () => {
       const response = await mockClient.fetchPosts('non-existent-team');
-      
+
       expect(response.posts).toEqual([]);
       expect(response.total).toBe(0);
       expect(response.has_more).toBe(false);
@@ -65,19 +67,19 @@ describe('MockApiClient', () => {
 
     it('should handle authentication failure', async () => {
       mockClient.setAuthFailure(true);
-      
+
       await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Authentication failed');
     });
 
     it('should handle network failure', async () => {
       mockClient.setNetworkFailure(true);
-      
+
       await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Network error');
     });
 
     it('should handle timeout', async () => {
       mockClient.setTimeout(true);
-      
+
       await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Request timeout');
     });
   });
@@ -91,7 +93,7 @@ describe('MockApiClient', () => {
       };
 
       const response = await mockClient.createPost('test-team', postData);
-      
+
       expect(response.post).toBeDefined();
       expect(response.post.id).toBeDefined();
       expect(response.post.team_name).toBe('test-team');
@@ -109,54 +111,58 @@ describe('MockApiClient', () => {
       };
 
       const response = await mockClient.createPost('test-team', postData);
-      
+
       expect(response.post.parent_post_id).toBe('post-seed-1');
     });
 
     it('should increment post count', async () => {
       const initialCount = mockClient.getPostCount();
-      
+
       await mockClient.createPost('test-team', {
         author_name: 'agent-test',
         content: 'New post',
       });
-      
+
       expect(mockClient.getPostCount()).toBe(initialCount + 1);
     });
 
     it('should handle authentication failure', async () => {
       mockClient.setAuthFailure(true);
-      
-      await expect(mockClient.createPost('test-team', {
-        author_name: 'agent-test',
-        content: 'Test',
-      })).rejects.toThrow('Authentication failed');
+
+      await expect(
+        mockClient.createPost('test-team', {
+          author_name: 'agent-test',
+          content: 'Test',
+        })
+      ).rejects.toThrow('Authentication failed');
     });
 
     it('should handle network failure', async () => {
       mockClient.setNetworkFailure(true);
-      
-      await expect(mockClient.createPost('test-team', {
-        author_name: 'agent-test',
-        content: 'Test',
-      })).rejects.toThrow('Network error');
+
+      await expect(
+        mockClient.createPost('test-team', {
+          author_name: 'agent-test',
+          content: 'Test',
+        })
+      ).rejects.toThrow('Network error');
     });
   });
 
   describe('test helpers', () => {
     it('should simulate response delay', async () => {
       mockClient.setResponseDelay(100);
-      
+
       const start = Date.now();
       await mockClient.fetchPosts('test-team');
       const duration = Date.now() - start;
-      
+
       expect(duration).toBeGreaterThanOrEqual(100);
     });
 
     it('should clear all posts', async () => {
       mockClient.clearPosts();
-      
+
       const response = await mockClient.fetchPosts('test-team');
       expect(response.posts).toEqual([]);
       expect(mockClient.getPostCount()).toBe(0);
@@ -164,7 +170,7 @@ describe('MockApiClient', () => {
 
     it('should add custom posts', async () => {
       mockClient.clearPosts();
-      
+
       mockClient.addPost({
         id: 'custom-1',
         team_name: 'test-team',
@@ -173,7 +179,7 @@ describe('MockApiClient', () => {
         tags: ['custom'],
         timestamp: new Date().toISOString(),
       });
-      
+
       const response = await mockClient.fetchPosts('test-team');
       expect(response.posts.length).toBe(1);
       expect(response.posts[0].id).toBe('custom-1');
@@ -189,29 +195,21 @@ describe('ApiClient', () => {
     process.env.SOCIAL_API_BASE_URL = 'https://api.test.com';
     process.env.SOCIAL_API_KEY = 'test-key';
     process.env.API_TIMEOUT = '5000';
-    
+
     apiClient = new ApiClient();
   });
 
   describe('constructor', () => {
     it('should use provided configuration', () => {
-      const customClient = new ApiClient(
-        'https://custom.api.com',
-        'custom-key',
-        10000
-      );
-      
+      const customClient = new ApiClient('https://custom.api.com', 'custom-key', 10000);
+
       // We can't directly test private properties, but we can verify through behavior
       expect(customClient).toBeDefined();
     });
 
     it('should remove trailing slash from base URL', () => {
-      const customClient = new ApiClient(
-        'https://api.test.com/',
-        'test-key',
-        5000
-      );
-      
+      const customClient = new ApiClient('https://api.test.com/', 'test-key', 5000);
+
       expect(customClient).toBeDefined();
     });
   });

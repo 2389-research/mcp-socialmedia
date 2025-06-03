@@ -20,71 +20,83 @@ describe('MCP Agent Social Server', () => {
     });
 
     // Register tools
-    server.registerTool('login', {
-      description: 'Authenticate and set agent identity for the session',
-      inputSchema: {
-        agent_name: z.string().describe('The name of the agent logging in'),
+    server.registerTool(
+      'login',
+      {
+        description: 'Authenticate and set agent identity for the session',
+        inputSchema: {
+          agent_name: z.string().describe('The name of the agent logging in'),
+        },
       },
-    }, async ({ agent_name }) => {
-      // Simulate the login functionality
-      const sessionId = `test-session-${Date.now()}`;
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              agent_name: agent_name,
-              team_name: 'test-team',
-              session_id: sessionId,
-            }),
-          },
-        ],
-      };
-    });
+      async ({ agent_name }) => {
+        // Simulate the login functionality
+        const sessionId = `test-session-${Date.now()}`;
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                agent_name: agent_name,
+                team_name: 'test-team',
+                session_id: sessionId,
+              }),
+            },
+          ],
+        };
+      }
+    );
 
-    server.registerTool('read_posts', {
-      description: 'Retrieve posts from the team\'s social feed',
-      inputSchema: {
-        limit: z.number().optional().default(10).describe('Maximum number of posts to retrieve'),
-        offset: z.number().optional().default(0).describe('Number of posts to skip'),
+    server.registerTool(
+      'read_posts',
+      {
+        description: "Retrieve posts from the team's social feed",
+        inputSchema: {
+          limit: z.number().optional().default(10).describe('Maximum number of posts to retrieve'),
+          offset: z.number().optional().default(0).describe('Number of posts to skip'),
+        },
       },
-    }, async ({ limit, offset }) => {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              posts: [],
-              limit,
-              offset,
-            }),
-          },
-        ],
-      };
-    });
+      async ({ limit, offset }) => {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                posts: [],
+                limit,
+                offset,
+              }),
+            },
+          ],
+        };
+      }
+    );
 
-    server.registerTool('create_post', {
-      description: 'Create a new post or reply within the team',
-      inputSchema: {
-        content: z.string().describe('The content of the post'),
-        tags: z.array(z.string()).optional().describe('Optional tags for the post'),
+    server.registerTool(
+      'create_post',
+      {
+        description: 'Create a new post or reply within the team',
+        inputSchema: {
+          content: z.string().describe('The content of the post'),
+          tags: z.array(z.string()).optional().describe('Optional tags for the post'),
+        },
       },
-    }, async ({ content, tags }) => {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: 'Not implemented yet',
-              content,
-              tags,
-            }),
-          },
-        ],
-      };
-    });
+      async ({ content, tags }) => {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: false,
+                error: 'Not implemented yet',
+                content,
+                tags,
+              }),
+            },
+          ],
+        };
+      }
+    );
   });
 
   afterEach(async () => {
@@ -141,7 +153,7 @@ describe('MCP Agent Social Server', () => {
       const result = await loginHandler({ agent_name: 'test-agent' });
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      
+
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toMatchObject({
         success: true,
@@ -171,7 +183,7 @@ describe('MCP Agent Social Server', () => {
       const result = await readPostsHandler({ limit: 5, offset: 0 });
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      
+
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toMatchObject({
         posts: [],
@@ -197,13 +209,13 @@ describe('MCP Agent Social Server', () => {
         };
       };
 
-      const result = await createPostHandler({ 
+      const result = await createPostHandler({
         content: 'Test post',
-        tags: ['test', 'example'] 
+        tags: ['test', 'example'],
       });
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      
+
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toMatchObject({
         success: false,

@@ -27,16 +27,16 @@ describe('Login Tool', () => {
     it('should create a new session for valid agent name', async () => {
       const agentName = 'test-agent';
       const result = await loginToolHandler({ agent_name: agentName }, context);
-      
+
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.agent_name).toBe(agentName);
       expect(response.team_name).toBe('test-team');
       expect(response.session_id).toBeDefined();
-      
+
       // Verify session was created
       const sessionId = response.session_id!;
       const session = sessionManager.getSession(sessionId);
@@ -47,7 +47,7 @@ describe('Login Tool', () => {
     it('should trim whitespace from agent name', async () => {
       const agentName = '  test-agent  ';
       const result = await loginToolHandler({ agent_name: agentName }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.agent_name).toBe('test-agent');
@@ -56,7 +56,7 @@ describe('Login Tool', () => {
     it('should handle agent names with special characters', async () => {
       const agentName = 'agent-123_特殊字符';
       const result = await loginToolHandler({ agent_name: agentName }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.agent_name).toBe(agentName);
@@ -67,17 +67,17 @@ describe('Login Tool', () => {
     it('should update existing session on re-login', async () => {
       const sessionId = 'existing-session';
       mockGetSessionId.mockReturnValue(sessionId);
-      
+
       // First login
       await sessionManager.createSession(sessionId, 'agent-1');
-      
+
       // Re-login with different agent
       const result = await loginToolHandler({ agent_name: 'agent-2' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.agent_name).toBe('agent-2');
-      
+
       // Verify session was updated
       const session = sessionManager.getSession(sessionId);
       expect(session?.agentName).toBe('agent-2');
@@ -86,15 +86,15 @@ describe('Login Tool', () => {
     it('should preserve session ID on re-login', async () => {
       const sessionId = 'persistent-session';
       mockGetSessionId.mockReturnValue(sessionId);
-      
+
       // First login
       const result1 = await loginToolHandler({ agent_name: 'agent-1' }, context);
       const response1: LoginToolResponse = JSON.parse(result1.content[0].text);
-      
+
       // Re-login
       const result2 = await loginToolHandler({ agent_name: 'agent-2' }, context);
       const response2: LoginToolResponse = JSON.parse(result2.content[0].text);
-      
+
       expect(response1.session_id).toBe(sessionId);
       expect(response2.session_id).toBe(sessionId);
     });
@@ -103,7 +103,7 @@ describe('Login Tool', () => {
   describe('Input validation', () => {
     it('should reject empty agent name', async () => {
       const result = await loginToolHandler({ agent_name: '' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Invalid input');
@@ -112,7 +112,7 @@ describe('Login Tool', () => {
 
     it('should reject whitespace-only agent name', async () => {
       const result = await loginToolHandler({ agent_name: '   ' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Invalid input');
@@ -120,7 +120,7 @@ describe('Login Tool', () => {
 
     it('should reject null agent name', async () => {
       const result = await loginToolHandler({ agent_name: null as any }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Invalid input');
@@ -128,7 +128,7 @@ describe('Login Tool', () => {
 
     it('should reject undefined agent name', async () => {
       const result = await loginToolHandler({ agent_name: undefined as any }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Invalid input');
@@ -138,12 +138,12 @@ describe('Login Tool', () => {
   describe('Error handling', () => {
     it('should handle session creation failure', async () => {
       // Mock session creation to throw error
-      jest.spyOn(sessionManager, 'createSession').mockRejectedValueOnce(
-        new Error('Database connection failed')
-      );
-      
+      jest
+        .spyOn(sessionManager, 'createSession')
+        .mockRejectedValueOnce(new Error('Database connection failed'));
+
       const result = await loginToolHandler({ agent_name: 'test-agent' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Failed to create session');
@@ -152,12 +152,10 @@ describe('Login Tool', () => {
 
     it('should handle unexpected errors', async () => {
       // Mock session creation to throw non-Error
-      jest.spyOn(sessionManager, 'createSession').mockRejectedValueOnce(
-        'String error'
-      );
-      
+      jest.spyOn(sessionManager, 'createSession').mockRejectedValueOnce('String error');
+
       const result = await loginToolHandler({ agent_name: 'test-agent' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
       expect(response.error).toBe('Failed to create session');
@@ -169,9 +167,9 @@ describe('Login Tool', () => {
     it('should use provided session ID function', async () => {
       const customSessionId = 'custom-session-123';
       mockGetSessionId.mockReturnValue(customSessionId);
-      
+
       const result = await loginToolHandler({ agent_name: 'test-agent' }, context);
-      
+
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.session_id).toBe(customSessionId);
       expect(mockGetSessionId).toHaveBeenCalled();
@@ -186,13 +184,13 @@ describe('Login Tool', () => {
   describe('Response format', () => {
     it('should always return MCP-compliant response structure', async () => {
       const result = await loginToolHandler({ agent_name: 'test-agent' }, context);
-      
+
       expect(result).toHaveProperty('content');
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content[0]).toHaveProperty('type', 'text');
       expect(result.content[0]).toHaveProperty('text');
       expect(typeof result.content[0].text).toBe('string');
-      
+
       // Verify JSON is valid
       expect(() => JSON.parse(result.content[0].text)).not.toThrow();
     });
@@ -200,7 +198,7 @@ describe('Login Tool', () => {
     it('should include all required fields in success response', async () => {
       const result = await loginToolHandler({ agent_name: 'test-agent' }, context);
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
-      
+
       expect(response).toHaveProperty('success', true);
       expect(response).toHaveProperty('agent_name');
       expect(response).toHaveProperty('team_name');
@@ -212,7 +210,7 @@ describe('Login Tool', () => {
     it('should include error fields in failure response', async () => {
       const result = await loginToolHandler({ agent_name: '' }, context);
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
-      
+
       expect(response).toHaveProperty('success', false);
       expect(response).toHaveProperty('error');
       expect(response).toHaveProperty('details');

@@ -2,12 +2,7 @@
 // ABOUTME: Handles authentication, error handling, and typed responses
 
 import fetch, { RequestInit, Response } from 'node-fetch';
-import { 
-  PostData, 
-  PostResponse, 
-  PostsResponse, 
-  PostQueryOptions
-} from './types.js';
+import { PostData, PostResponse, PostsResponse, PostQueryOptions } from './types.js';
 import { config } from './config.js';
 
 export interface IApiClient {
@@ -35,7 +30,7 @@ export class ApiClient implements IApiClient {
    */
   async fetchPosts(teamName: string, options?: PostQueryOptions): Promise<PostsResponse> {
     const params = new URLSearchParams();
-    
+
     if (options?.limit !== undefined) {
       params.append('limit', options.limit.toString());
     }
@@ -53,7 +48,9 @@ export class ApiClient implements IApiClient {
     }
 
     const queryString = params.toString();
-    const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts${queryString ? `?${queryString}` : ''}`;
+    const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts${
+      queryString ? `?${queryString}` : ''
+    }`;
 
     const response = await this.makeRequest('GET', url);
     return response as PostsResponse;
@@ -64,7 +61,7 @@ export class ApiClient implements IApiClient {
    */
   async createPost(teamName: string, postData: PostData): Promise<PostResponse> {
     const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts`;
-    
+
     const response = await this.makeRequest('POST', url, postData);
     return response as PostResponse;
   }
@@ -72,11 +69,7 @@ export class ApiClient implements IApiClient {
   /**
    * Make an HTTP request with error handling and logging
    */
-  private async makeRequest(
-    method: string,
-    url: string,
-    body?: unknown
-  ): Promise<unknown> {
+  private async makeRequest(method: string, url: string, body?: unknown): Promise<unknown> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -84,9 +77,9 @@ export class ApiClient implements IApiClient {
       const options: RequestInit = {
         method,
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         signal: controller.signal,
       };
@@ -131,7 +124,11 @@ export class ApiClient implements IApiClient {
     let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
 
     try {
-      const errorData = await response.json() as { error?: string; message?: string; code?: string };
+      const errorData = (await response.json()) as {
+        error?: string;
+        message?: string;
+        code?: string;
+      };
       errorMessage = errorData.error || errorData.message || errorMessage;
     } catch {
       // Ignore JSON parse errors

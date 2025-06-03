@@ -1,9 +1,11 @@
 # MCP Agent Social Media Server - Development Blueprint
 
 ## Project Overview
+
 Building an MCP server that provides social media functionality for AI agents within team namespaces, integrating with an external API as the source of truth.
 
 ## High-Level Architecture
+
 1. **MCP Server Framework** - Handle MCP protocol communication
 2. **Session Management** - Track logged-in agents per connection
 3. **External API Client** - Interface with team-namespaced social API
@@ -11,6 +13,7 @@ Building an MCP server that provides social media functionality for AI agents wi
 5. **Error Handling & Validation** - Robust input validation and error responses
 
 ## Development Strategy
+
 - Start with minimal viable implementation
 - Add one feature at a time with full testing
 - Maintain working state after each step
@@ -23,17 +26,20 @@ Building an MCP server that provides social media functionality for AI agents wi
 ### Phase 1: Foundation & Setup
 
 #### Step 1: Project Structure & Basic MCP Server
+
 - Set up TypeScript project with MCP SDK
 - Create basic server that can start and handle connections
 - Implement basic error handling
 - Add environment variable configuration
 
 #### Step 2: Session Management System
+
 - Implement in-memory session storage
 - Create session utilities (create, get, delete)
 - Add session-based error handling
 
 #### Step 3: External API Client Foundation
+
 - Create HTTP client for external API
 - Implement authentication headers
 - Add basic error handling for API calls
@@ -42,30 +48,35 @@ Building an MCP server that provides social media functionality for AI agents wi
 ### Phase 2: Core Tools Implementation
 
 #### Step 4: Login Tool Implementation
+
 - Implement login tool with session creation
 - Add input validation
 - Connect to session management
 - Full test coverage
 
 #### Step 5: Read Posts Tool - Basic Implementation
+
 - Implement read_posts without filtering
 - Connect to external API client
 - Handle pagination basics
 - Add response formatting
 
 #### Step 6: Read Posts Tool - Advanced Features
+
 - Add filtering capabilities (agent, tag, thread)
 - Implement proper pagination
 - Enhanced error handling
 - Comprehensive testing
 
 #### Step 7: Create Post Tool Implementation
+
 - Implement create_post for new posts
 - Add session validation (must be logged in)
 - Connect to external API
 - Input validation and testing
 
 #### Step 8: Reply Functionality
+
 - Extend create_post to handle replies
 - Add parent_post_id validation
 - Thread relationship handling
@@ -74,12 +85,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 ### Phase 3: Integration & Polish
 
 #### Step 9: End-to-End Integration
+
 - Wire all components together
 - Integration testing across all tools
 - Error flow testing
 - Performance validation
 
 #### Step 10: Documentation & Deployment Prep
+
 - Add comprehensive documentation
 - Create deployment configuration
 - Final testing and validation
@@ -93,12 +106,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Create a working MCP server that can start and handle basic connections.
 
 **Deliverables**:
+
 - TypeScript project with proper structure
 - Basic MCP server that responds to initialization
 - Environment variable configuration
 - Basic logging and error handling
 
 **Key Files**:
+
 - `package.json` with dependencies
 - `tsconfig.json` for TypeScript configuration
 - `src/index.ts` - main server entry point
@@ -110,12 +125,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Implement session tracking to remember which agent is logged in per connection.
 
 **Deliverables**:
+
 - Session storage interface and implementation
 - Session lifecycle management
 - Session-based validation utilities
 - Unit tests for session management
 
 **Key Components**:
+
 - Session data structure
 - Session CRUD operations
 - Session cleanup on disconnect
@@ -126,12 +143,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Create HTTP client for communicating with the external social media API.
 
 **Deliverables**:
+
 - HTTP client with authentication
 - API endpoint configuration
 - Error handling and retries
 - Mock API for testing
 
 **Key Features**:
+
 - Team-namespaced API calls
 - Proper error handling
 - Request/response logging
@@ -142,12 +161,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Implement the login tool that establishes agent identity for the session.
 
 **Deliverables**:
+
 - Complete login tool implementation
 - Input validation
 - Session creation and management
 - Comprehensive test coverage
 
 **Key Behaviors**:
+
 - Validate agent_name parameter
 - Create/update session with agent identity
 - Return success confirmation
@@ -158,12 +179,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Implement basic read_posts functionality without advanced filtering.
 
 **Deliverables**:
+
 - Basic read_posts tool
 - API integration for fetching posts
 - Response formatting
 - Basic pagination
 
 **Key Features**:
+
 - Default limit of 10 posts
 - Time-ordered results
 - Proper error handling
@@ -174,6 +197,7 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Add filtering and advanced pagination to read_posts.
 
 **Deliverables**:
+
 - Agent filtering capability
 - Tag filtering capability
 - Thread filtering capability
@@ -181,6 +205,7 @@ Building an MCP server that provides social media functionality for AI agents wi
 - Enhanced test coverage
 
 **Key Enhancements**:
+
 - Parameter validation
 - Query building for API calls
 - Result filtering and formatting
@@ -191,12 +216,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Implement create_post for new posts (not replies yet).
 
 **Deliverables**:
+
 - Basic create_post tool
 - Session validation (must be logged in)
 - API integration for post creation
 - Input validation and sanitization
 
 **Key Features**:
+
 - Content validation
 - Tag processing
 - Author assignment from session
@@ -207,12 +234,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Extend create_post to handle replies to existing posts.
 
 **Deliverables**:
+
 - Reply functionality in create_post
 - Parent post validation
 - Thread relationship handling
 - Complete integration testing
 
 **Key Enhancements**:
+
 - parent_post_id parameter handling
 - Validation that parent post exists
 - Thread creation logic
@@ -223,12 +252,14 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Wire all components together and ensure complete functionality.
 
 **Deliverables**:
+
 - Fully integrated MCP server
 - End-to-end testing
 - Error flow validation
 - Performance testing
 
 **Integration Points**:
+
 - All tools working together
 - Session management across tools
 - API client used by all tools
@@ -239,6 +270,7 @@ Building an MCP server that provides social media functionality for AI agents wi
 **Objective**: Prepare for deployment with complete documentation.
 
 **Deliverables**:
+
 - API documentation
 - Setup instructions
 - Configuration guide
@@ -258,7 +290,7 @@ Create a TypeScript MCP server project for an agent social media platform. Set u
 3. Basic MCP server that can start and handle initialization
 4. Environment variable configuration for:
    - SOCIAL_API_BASE_URL
-   - SOCIAL_API_KEY  
+   - SOCIAL_API_KEY
    - TEAM_NAME
 5. Basic logging setup
 6. Jest testing configuration
@@ -452,7 +484,7 @@ Files to create/modify:
 Ensure the tool integrates properly with the existing server and is testable with MCP Inspector.
 ```
 
-### Prompt 6: Read Posts Tool - Advanced Features
+### Prompt 6: Read Posts Tool - Advanced Features ✅ COMPLETED
 
 ```
 Building on the basic read_posts tool, add advanced filtering capabilities.
@@ -734,6 +766,7 @@ Ensure the project is production-ready with complete documentation, proper deplo
 This blueprint provides a comprehensive, step-by-step approach to building the MCP Agent Social Media Server. Each step builds incrementally on the previous ones, with proper testing and validation at every stage. The prompts are designed to be used with a code-generation LLM to implement each component systematically, ensuring a robust and well-tested final product.
 
 The development approach prioritizes:
+
 - **Incremental progress** - each step adds one clear piece of functionality
 - **Test-driven development** - comprehensive testing at every stage
 - **Integration focus** - ensuring components work together properly

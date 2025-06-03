@@ -34,7 +34,7 @@ describe('SessionManager', () => {
       const firstTimestamp = firstSession.loginTimestamp;
 
       // Wait a bit to ensure timestamp difference
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const secondSession = await sessionManager.createSession(sessionId, secondAgent);
 
@@ -101,8 +101,8 @@ describe('SessionManager', () => {
 
       const allSessions = sessionManager.getAllSessions();
       expect(allSessions).toHaveLength(3);
-      
-      const sessionIds = allSessions.map(s => s.sessionId);
+
+      const sessionIds = allSessions.map((s) => s.sessionId);
       expect(sessionIds).toContain('session-1');
       expect(sessionIds).toContain('session-2');
       expect(sessionIds).toContain('session-3');
@@ -145,7 +145,7 @@ describe('SessionManager', () => {
     it('should remove sessions older than specified age', async () => {
       // Create sessions with different timestamps
       const oldSession = await sessionManager.createSession('old-session', 'old-agent');
-      
+
       // Manually set old timestamp
       oldSession.loginTimestamp = new Date(Date.now() - 3600000); // 1 hour ago
 
@@ -200,7 +200,7 @@ describe('SessionManager', () => {
 
     it('should handle concurrent session operations', async () => {
       const promises = [];
-      
+
       // Create 100 sessions concurrently
       for (let i = 0; i < 100; i++) {
         promises.push(sessionManager.createSession(`session-${i}`, `agent-${i}`));

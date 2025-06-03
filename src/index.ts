@@ -3,13 +3,13 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
 import { config, validateConfig } from './config.js';
 import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
 import { MockApiClient } from './mock-api-client.js';
 import { loginToolSchema, loginToolHandler } from './tools/login.js';
 import { readPostsToolSchema, readPostsToolHandler } from './tools/read-posts.js';
+import { createPostToolSchema, createPostToolHandler } from './tools/create-post.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -21,10 +21,8 @@ const sessionManager = new SessionManager();
 
 // Initialize API client (use mock for development if specified)
 // Will be used by tools in later implementations
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const apiClient = process.env.USE_MOCK_API === 'true' 
-  ? new MockApiClient() 
-  : new ApiClient();
+
+const apiClient = process.env.USE_MOCK_API === 'true' ? new MockApiClient() : new ApiClient();
 
 // Store cleanup interval globally for shutdown
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
@@ -36,7 +34,7 @@ server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
     sessionManager,
     getSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substring(7)}`,
   };
-  
+
   return loginToolHandler(args, toolContext);
 });
 
@@ -46,32 +44,20 @@ server.registerTool('read_posts', readPostsToolSchema, async (args, _mcpContext)
   const toolContext = {
     apiClient,
   };
-  
+
   return readPostsToolHandler(args, toolContext);
 });
 
 // Register the create_post tool
-server.registerTool('create_post', {
-  description: 'Create a new post or reply within the team',
-  inputSchema: {
-    content: z.string().describe('The content of the post'),
-    tags: z.array(z.string()).optional().describe('Optional tags for the post'),
-  },
-}, async ({ content, tags }) => {
-  // Placeholder implementation
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          success: false,
-          error: 'Not implemented yet',
-          content,
-          tags,
-        }),
-      },
-    ],
+server.registerTool('create_post', createPostToolSchema, async (args, _mcpContext) => {
+  // Create context for the create post tool
+  const toolContext = {
+    sessionManager,
+    apiClient,
+    getSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substring(7)}`,
   };
+
+  return createPostToolHandler(args, toolContext);
 });
 
 async function main() {
@@ -79,15 +65,15 @@ async function main() {
     validateConfig();
     console.error(`Starting MCP server for team: ${config.teamName}`);
     console.error(`API endpoint: ${config.socialApiBaseUrl}`);
-    
+
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('MCP Agent Social Server running...');
-    
+
     // Set up graceful shutdown
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
-    
+
     // Set up periodic session cleanup (every 30 minutes)
     cleanupInterval = setInterval(() => {
       const removed = sessionManager.cleanupOldSessions(3600000); // 1 hour
@@ -103,19 +89,19 @@ async function main() {
 
 async function shutdown(signal: string) {
   console.error(`\nReceived ${signal}, shutting down gracefully...`);
-  
+
   // Clear cleanup interval
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
   }
-  
+
   // Clean up sessions
   const sessionCount = sessionManager.getSessionCount();
   if (sessionCount > 0) {
     console.error(`Cleaning up ${sessionCount} active sessions...`);
     sessionManager.clearAllSessions();
   }
-  
+
   // Close server
   await server.close();
   process.exit(0);
