@@ -1,10 +1,10 @@
 // ABOUTME: End-to-end integration tests for complete workflows
 // ABOUTME: Tests full agent interactions including login, posting, and replies
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SessionManager } from '../../src/session-manager.js';
-import { MockApiClient } from '../../src/mock-api-client.js';
+import { ApiClient } from '../../src/api-client.js';
 import { loginToolHandler } from '../../src/tools/login.js';
 import { readPostsToolHandler } from '../../src/tools/read-posts.js';
 import { createPostToolHandler } from '../../src/tools/create-post.js';
@@ -13,7 +13,7 @@ import { metrics } from '../../src/metrics.js';
 
 describe('End-to-End Integration Tests', () => {
   let sessionManager: SessionManager;
-  let apiClient: MockApiClient;
+  let apiClient: jest.Mocked<ApiClient>;
   let sessionId: string;
 
   beforeEach(() => {
@@ -23,7 +23,30 @@ describe('End-to-End Integration Tests', () => {
 
     // Initialize components
     sessionManager = new SessionManager();
-    apiClient = new MockApiClient();
+    apiClient = {
+      fetchPosts: jest.fn(),
+      createPost: jest.fn(),
+    } as jest.Mocked<ApiClient>;
+
+    // Set up default mock responses
+    apiClient.fetchPosts.mockResolvedValue({
+      posts: [],
+      total: 0,
+      has_more: false,
+    });
+
+    apiClient.createPost.mockImplementation(async (teamName, postData) => ({
+      post: {
+        id: `post-${Date.now()}`,
+        team_name: teamName,
+        author_name: postData.author_name,
+        content: postData.content,
+        tags: postData.tags || [],
+        timestamp: new Date().toISOString(),
+        parent_post_id: postData.parent_post_id,
+        deleted: false,
+      },
+    }));
     sessionId = `test-session-${Date.now()}`;
 
     // Reset metrics

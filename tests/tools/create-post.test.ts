@@ -4,12 +4,13 @@
 import { jest } from '@jest/globals';
 import { createPostToolHandler, CreatePostToolContext } from '../../src/tools/create-post';
 import { SessionManager } from '../../src/session-manager';
-import { MockApiClient } from '../../src/mock-api-client';
+import { ApiClient } from '../../src/api-client';
 import { CreatePostToolResponse, Post } from '../../src/types';
+import { config } from '../../src/config';
 
 describe('Create Post Tool', () => {
   let sessionManager: SessionManager;
-  let mockApiClient: MockApiClient;
+  let mockApiClient: jest.Mocked<ApiClient>;
   let context: CreatePostToolContext;
   let mockGetSessionId: jest.Mock<() => string>;
 
@@ -18,7 +19,10 @@ describe('Create Post Tool', () => {
     process.env.TEAM_NAME = 'test-team';
 
     sessionManager = new SessionManager();
-    mockApiClient = new MockApiClient();
+    mockApiClient = {
+      fetchPosts: jest.fn(),
+      createPost: jest.fn(),
+    } as jest.Mocked<ApiClient>;
     mockGetSessionId = jest.fn(() => 'test-session-123');
 
     context = {
@@ -26,6 +30,26 @@ describe('Create Post Tool', () => {
       apiClient: mockApiClient,
       getSessionId: mockGetSessionId,
     };
+
+    // Set up default mock responses
+    mockApiClient.createPost.mockImplementation(async (teamName, postData) => ({
+      post: {
+        id: `post-${Date.now()}`,
+        team_name: teamName,
+        author_name: postData.author_name,
+        content: postData.content,
+        tags: postData.tags || [],
+        timestamp: new Date().toISOString(),
+        parent_post_id: postData.parent_post_id,
+        deleted: false,
+      },
+    }));
+
+    mockApiClient.fetchPosts.mockResolvedValue({
+      posts: [],
+      total: 0,
+      has_more: false,
+    });
   });
 
   describe('Successful post creation', () => {
@@ -46,7 +70,7 @@ describe('Create Post Tool', () => {
       expect(response.post).toBeDefined();
       expect(response.post!.content).toBe(content);
       expect(response.post!.author_name).toBe('test-agent');
-      expect(response.post!.team_name).toBe('test-team');
+      expect(response.post!.team_name).toBe(config.teamName);
       expect(response.post!.id).toBeDefined();
       expect(response.post!.timestamp).toBeDefined();
       expect(response.error).toBeUndefined();
@@ -103,12 +127,15 @@ describe('Create Post Tool', () => {
       expect(response1.post!.id).not.toBe(response2.post!.id);
     });
 
-    it('should store created posts for retrieval', async () => {
-      const initialCount = mockApiClient.getPostCount();
-
+    it('should call the API client to create posts', async () => {
       await createPostToolHandler({ content: 'New post' }, context);
 
-      expect(mockApiClient.getPostCount()).toBe(initialCount + 1);
+      expect(mockApiClient.createPost).toHaveBeenCalledWith('test-team', {
+        author_name: 'test-agent',
+        content: 'New post',
+        tags: undefined,
+        parent_post_id: undefined,
+      });
     });
   });
 
@@ -271,7 +298,7 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle API authentication failure', async () => {
-      mockApiClient.setAuthFailure(true);
+      mockApiClient.createPost.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
 
       const result = await createPostToolHandler({ content: 'Auth fail test' }, context);
 
@@ -282,7 +309,7 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle network errors', async () => {
-      mockApiClient.setNetworkFailure(true);
+      mockApiClient.createPost.mockRejectedValueOnce(new Error('Network error: Failed to fetch'));
 
       const result = await createPostToolHandler({ content: 'Network fail test' }, context);
 
@@ -293,7 +320,7 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle API timeout', async () => {
-      mockApiClient.setTimeout(true);
+      mockApiClient.createPost.mockRejectedValueOnce(new Error('Request timeout after 30000ms'));
 
       const result = await createPostToolHandler({ content: 'Timeout test' }, context);
 
@@ -304,7 +331,7 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle unexpected errors', async () => {
-      jest.spyOn(mockApiClient, 'createPost').mockRejectedValueOnce(new Error('Unexpected error'));
+      mockApiClient.createPost.mockRejectedValueOnce(new Error('Unexpected error'));
 
       const result = await createPostToolHandler({ content: 'Error test' }, context);
 
@@ -418,14 +445,19 @@ describe('Create Post Tool', () => {
       // Create a logged-in session
       await sessionManager.createSession('test-session-123', 'test-agent');
 
-      // Add a parent post to the mock API
-      mockApiClient.addPost({
-        id: 'parent-post-1',
-        team_name: 'test-team',
-        author_name: 'test-author',
-        content: 'This is a parent post',
-        tags: ['discussion'],
-        timestamp: new Date().toISOString(),
+      // Mock fetchPosts to return a parent post
+      mockApiClient.fetchPosts.mockResolvedValue({
+        posts: [{
+          id: 'parent-post-1',
+          team_name: 'test-team',
+          author_name: 'test-author',
+          content: 'This is a parent post',
+          tags: ['discussion'],
+          timestamp: new Date().toISOString(),
+          deleted: false,
+        }],
+        total: 1,
+        has_more: false,
       });
     });
 
@@ -490,8 +522,20 @@ describe('Create Post Tool', () => {
       expect(firstResponse.success).toBe(true);
       const firstReplyId = firstResponse.post!.id;
 
-      // Add the reply to mock API so it can be found
-      mockApiClient.addPost(firstResponse.post!);
+      // Update mock to include the new reply for nested reply test
+      mockApiClient.fetchPosts.mockResolvedValue({
+        posts: [{
+          id: 'parent-post-1',
+          team_name: 'test-team',
+          author_name: 'test-author',
+          content: 'This is a parent post',
+          tags: ['discussion'],
+          timestamp: new Date().toISOString(),
+          deleted: false,
+        }, firstResponse.post!],
+        total: 2,
+        has_more: false,
+      });
 
       // Create a reply to the reply
       const nestedReply = await createPostToolHandler(
@@ -526,9 +570,7 @@ describe('Create Post Tool', () => {
 
     it('should handle parent post validation errors gracefully', async () => {
       // Make the API fail during parent validation
-      jest
-        .spyOn(mockApiClient, 'fetchPosts')
-        .mockRejectedValueOnce(new Error('Network error during validation'));
+      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Network error during validation'));
 
       const result = await createPostToolHandler(
         {
@@ -599,14 +641,11 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle replies from different team posts correctly', async () => {
-      // Add a post from a different team
-      mockApiClient.addPost({
-        id: 'other-team-post',
-        team_name: 'other-team',
-        author_name: 'other-author',
-        content: 'Post from another team',
-        tags: [],
-        timestamp: new Date().toISOString(),
+      // Mock empty response (no posts found from different team)
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [],
+        total: 0,
+        has_more: false,
       });
 
       const result = await createPostToolHandler(

@@ -1,234 +1,227 @@
-// ABOUTME: Tests for ApiClient functionality
-// ABOUTME: Validates API requests, error handling, and mock client behavior
+// ABOUTME: Tests for ApiClient functionality with mocked fetch
+// ABOUTME: Uses dependency injection to mock HTTP requests in tests only
 
 import { jest } from '@jest/globals';
-import { ApiClient } from '../src/api-client';
-import { MockApiClient } from '../src/mock-api-client';
+import { ApiClient, FetchFunction } from '../src/api-client';
 import { PostData, PostQueryOptions } from '../src/types';
 
-describe('MockApiClient', () => {
-  let mockClient: MockApiClient;
+describe('ApiClient', () => {
+  let apiClient: ApiClient;
+  let mockFetch: jest.MockedFunction<FetchFunction>;
+  const baseUrl = 'https://api.test.com';
+  const apiKey = 'test-api-key';
 
   beforeEach(() => {
-    mockClient = new MockApiClient();
+    // Create a mocked fetch function
+    mockFetch = jest.fn() as jest.MockedFunction<FetchFunction>;
+    
+    // Create API client with mocked fetch
+    apiClient = new ApiClient(baseUrl, apiKey, 30000, mockFetch);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('fetchPosts', () => {
-    it('should fetch posts for a team', async () => {
-      const response = await mockClient.fetchPosts('test-team');
+    it('should fetch posts successfully', async () => {
+      const mockResponse = {
+        posts: [
+          {
+            id: 'post-1',
+            team_name: 'test-team',
+            author_name: 'test-user',
+            content: 'Test content',
+            tags: ['test'],
+            timestamp: '2023-01-01T00:00:00Z',
+            deleted: false,
+          },
+        ],
+        total: 1,
+        has_more: false,
+      };
 
-      expect(response.posts).toBeDefined();
-      expect(response.posts.length).toBeGreaterThan(0);
-      expect(response.total).toBeGreaterThan(0);
-      expect(response.has_more).toBeDefined();
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: jest.fn().mockResolvedValue(mockResponse),
+      } as any);
+
+      const result = await apiClient.fetchPosts('test-team');
+
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${baseUrl}/teams/test-team/posts`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${apiKey}`,
+          }),
+        })
+      );
     });
 
-    it('should filter posts by agent', async () => {
-      const options: PostQueryOptions = { agent_filter: 'agent-alice' };
-      const response = await mockClient.fetchPosts('test-team', options);
+    it('should include query parameters when provided', async () => {
+      const options: PostQueryOptions = {
+        limit: 5,
+        offset: 10,
+        agent_filter: 'test-agent',
+        tag_filter: 'test-tag',
+      };
 
-      expect(response.posts.every((post) => post.author_name === 'agent-alice')).toBe(true);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: jest.fn().mockResolvedValue({ posts: [], total: 0, has_more: false }),
+      } as any);
+
+      await apiClient.fetchPosts('test-team', options);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('limit=5&offset=10&agent=test-agent&tag=test-tag'),
+        expect.any(Object)
+      );
     });
 
-    it('should filter posts by tag', async () => {
-      const options: PostQueryOptions = { tag_filter: 'update' };
-      const response = await mockClient.fetchPosts('test-team', options);
+    it('should handle authentication errors', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: jest.fn().mockResolvedValue({ error: 'Invalid API key' }),
+      } as any);
 
-      expect(response.posts.every((post) => post.tags.includes('update'))).toBe(true);
+      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
+        'Authentication failed: Invalid API key'
+      );
     });
 
-    it('should filter posts by thread', async () => {
-      const options: PostQueryOptions = { thread_id: 'post-seed-2' };
-      const response = await mockClient.fetchPosts('test-team', options);
+    it('should handle network errors', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      expect(
-        response.posts.some(
-          (post) => post.id === 'post-seed-2' || post.parent_post_id === 'post-seed-2'
-        )
-      ).toBe(true);
-    });
-
-    it('should handle pagination', async () => {
-      const page1 = await mockClient.fetchPosts('test-team', { limit: 2, offset: 0 });
-      const page2 = await mockClient.fetchPosts('test-team', { limit: 2, offset: 2 });
-
-      expect(page1.posts.length).toBeLessThanOrEqual(2);
-      expect(page2.posts.length).toBeLessThanOrEqual(2);
-      expect(page1.posts[0].id).not.toBe(page2.posts[0]?.id);
-    });
-
-    it('should return empty array for non-existent team', async () => {
-      const response = await mockClient.fetchPosts('non-existent-team');
-
-      expect(response.posts).toEqual([]);
-      expect(response.total).toBe(0);
-      expect(response.has_more).toBe(false);
-    });
-
-    it('should handle authentication failure', async () => {
-      mockClient.setAuthFailure(true);
-
-      await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Authentication failed');
-    });
-
-    it('should handle network failure', async () => {
-      mockClient.setNetworkFailure(true);
-
-      await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Network error');
-    });
-
-    it('should handle timeout', async () => {
-      mockClient.setTimeout(true);
-
-      await expect(mockClient.fetchPosts('test-team')).rejects.toThrow('Request timeout');
+      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow('Network error');
     });
   });
 
   describe('createPost', () => {
-    it('should create a new post', async () => {
+    it('should create post successfully', async () => {
       const postData: PostData = {
-        author_name: 'agent-test',
+        author_name: 'test-user',
         content: 'Test post content',
-        tags: ['test', 'example'],
+        tags: ['test'],
       };
 
-      const response = await mockClient.createPost('test-team', postData);
+      const mockResponse = {
+        post: {
+          id: 'new-post-1',
+          team_name: 'test-team',
+          ...postData,
+          timestamp: '2023-01-01T00:00:00Z',
+          deleted: false,
+        },
+      };
 
-      expect(response.post).toBeDefined();
-      expect(response.post.id).toBeDefined();
-      expect(response.post.team_name).toBe('test-team');
-      expect(response.post.author_name).toBe(postData.author_name);
-      expect(response.post.content).toBe(postData.content);
-      expect(response.post.tags).toEqual(postData.tags);
-      expect(response.post.timestamp).toBeDefined();
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        statusText: 'Created',
+        json: jest.fn().mockResolvedValue(mockResponse),
+      } as any);
+
+      const result = await apiClient.createPost('test-team', postData);
+
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${baseUrl}/teams/test-team/posts`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify(postData),
+        })
+      );
     });
 
-    it('should create a reply post', async () => {
+    it('should handle validation errors', async () => {
       const postData: PostData = {
-        author_name: 'agent-test',
-        content: 'Reply content',
-        parent_post_id: 'post-seed-1',
+        author_name: '',
+        content: '',
+        tags: [],
       };
 
-      const response = await mockClient.createPost('test-team', postData);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        statusText: 'Unprocessable Entity',
+        json: jest.fn().mockResolvedValue({ error: 'Validation failed' }),
+      } as any);
 
-      expect(response.post.parent_post_id).toBe('post-seed-1');
+      await expect(apiClient.createPost('test-team', postData)).rejects.toThrow(
+        'Validation failed'
+      );
     });
 
-    it('should increment post count', async () => {
-      const initialCount = mockClient.getPostCount();
+    it('should handle rate limiting', async () => {
+      const postData: PostData = {
+        author_name: 'test-user',
+        content: 'Test content',
+        tags: [],
+      };
 
-      await mockClient.createPost('test-team', {
-        author_name: 'agent-test',
-        content: 'New post',
-      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        json: jest.fn().mockResolvedValue({ error: 'Rate limit exceeded' }),
+      } as any);
 
-      expect(mockClient.getPostCount()).toBe(initialCount + 1);
-    });
-
-    it('should handle authentication failure', async () => {
-      mockClient.setAuthFailure(true);
-
-      await expect(
-        mockClient.createPost('test-team', {
-          author_name: 'agent-test',
-          content: 'Test',
-        })
-      ).rejects.toThrow('Authentication failed');
-    });
-
-    it('should handle network failure', async () => {
-      mockClient.setNetworkFailure(true);
-
-      await expect(
-        mockClient.createPost('test-team', {
-          author_name: 'agent-test',
-          content: 'Test',
-        })
-      ).rejects.toThrow('Network error');
+      await expect(apiClient.createPost('test-team', postData)).rejects.toThrow(
+        'Rate limit exceeded: Rate limit exceeded'
+      );
     });
   });
 
-  describe('test helpers', () => {
-    it('should simulate response delay', async () => {
-      mockClient.setResponseDelay(100);
+  describe('error handling', () => {
+    it('should handle server errors', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: jest.fn().mockResolvedValue({ error: 'Server error' }),
+      } as any);
 
-      const start = Date.now();
-      await mockClient.fetchPosts('test-team');
-      const duration = Date.now() - start;
-
-      expect(duration).toBeGreaterThanOrEqual(100);
+      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
+        'Server error: Server error'
+      );
     });
 
-    it('should clear all posts', async () => {
-      mockClient.clearPosts();
+    it('should handle malformed JSON responses', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
+      } as any);
 
-      const response = await mockClient.fetchPosts('test-team');
-      expect(response.posts).toEqual([]);
-      expect(mockClient.getPostCount()).toBe(0);
+      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
+        'API request failed: 400 Bad Request'
+      );
     });
-
-    it('should add custom posts', async () => {
-      mockClient.clearPosts();
-
-      mockClient.addPost({
-        id: 'custom-1',
-        team_name: 'test-team',
-        author_name: 'custom-agent',
-        content: 'Custom content',
-        tags: ['custom'],
-        timestamp: new Date().toISOString(),
-      });
-
-      const response = await mockClient.fetchPosts('test-team');
-      expect(response.posts.length).toBe(1);
-      expect(response.posts[0].id).toBe('custom-1');
-    });
-  });
-});
-
-describe('ApiClient', () => {
-  let apiClient: ApiClient;
-
-  beforeEach(() => {
-    // Set up test environment variables
-    process.env.SOCIAL_API_BASE_URL = 'https://api.test.com';
-    process.env.SOCIAL_API_KEY = 'test-key';
-    process.env.API_TIMEOUT = '5000';
-
-    apiClient = new ApiClient();
   });
 
   describe('constructor', () => {
-    it('should use provided configuration', () => {
-      const customClient = new ApiClient('https://custom.api.com', 'custom-key', 10000);
-
-      // We can't directly test private properties, but we can verify through behavior
-      expect(customClient).toBeDefined();
+    it('should create an ApiClient with default fetch', () => {
+      // Test that we can create without providing fetch (uses real fetch in production)
+      const defaultClient = new ApiClient(baseUrl, apiKey, 30000);
+      expect(defaultClient).toBeInstanceOf(ApiClient);
     });
 
-    it('should remove trailing slash from base URL', () => {
-      const customClient = new ApiClient('https://api.test.com/', 'test-key', 5000);
-
-      expect(customClient).toBeDefined();
-    });
-  });
-
-  describe('URL construction', () => {
-    it('should build correct URL for fetchPosts', () => {
-      // This is tested indirectly through the mock client
-      // In a real implementation, you might mock the fetch function
-      expect(true).toBe(true);
-    });
-
-    it('should encode team names properly', () => {
-      // This is tested indirectly through the mock client
-      expect(true).toBe(true);
-    });
-
-    it('should build query parameters correctly', () => {
-      // This is tested indirectly through the mock client
-      expect(true).toBe(true);
+    it('should create an ApiClient with custom fetch for testing', () => {
+      expect(apiClient).toBeInstanceOf(ApiClient);
     });
   });
 });

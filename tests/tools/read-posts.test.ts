@@ -3,21 +3,41 @@
 
 import { jest } from '@jest/globals';
 import { readPostsToolHandler, ReadPostsToolContext } from '../../src/tools/read-posts';
-import { MockApiClient } from '../../src/mock-api-client';
+import { ApiClient } from '../../src/api-client';
 import { ReadPostsToolResponse, Post } from '../../src/types';
 
 describe('Read Posts Tool', () => {
-  let mockApiClient: MockApiClient;
+  let mockApiClient: jest.Mocked<ApiClient>;
   let context: ReadPostsToolContext;
 
   beforeEach(() => {
     // Set up environment
     process.env.TEAM_NAME = 'test-team';
 
-    mockApiClient = new MockApiClient();
+    mockApiClient = {
+      fetchPosts: jest.fn(),
+      createPost: jest.fn(),
+    } as jest.Mocked<ApiClient>;
     context = {
       apiClient: mockApiClient,
     };
+
+    // Set up default mock response
+    mockApiClient.fetchPosts.mockResolvedValue({
+      posts: [
+        {
+          id: 'post-1',
+          team_name: 'test-team',
+          author_name: 'test-user',
+          content: 'Test post content',
+          tags: ['test'],
+          timestamp: '2023-01-01T00:00:00Z',
+          deleted: false,
+        },
+      ],
+      total: 1,
+      has_more: false,
+    });
   });
 
   describe('Successful post retrieval', () => {
@@ -121,8 +141,12 @@ describe('Read Posts Tool', () => {
 
   describe('Empty results', () => {
     it('should handle empty post list gracefully', async () => {
-      // Clear all posts
-      mockApiClient.clearPosts();
+      // Mock empty response
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [],
+        total: 0,
+        has_more: false,
+      });
 
       const result = await readPostsToolHandler({}, context);
 
@@ -134,15 +158,11 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle team with no posts gracefully', async () => {
-      // Clear all posts and add one for a different team
-      mockApiClient.clearPosts();
-      mockApiClient.addPost({
-        id: 'other-team-post',
-        team_name: 'other-team',
-        author_name: 'other-agent',
-        content: 'Post from another team',
-        tags: [],
-        timestamp: new Date().toISOString(),
+      // Mock empty response for test-team (no posts)
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [],
+        total: 0,
+        has_more: false,
       });
 
       const result = await readPostsToolHandler({}, context);
@@ -155,7 +175,7 @@ describe('Read Posts Tool', () => {
 
   describe('Error handling', () => {
     it('should handle API authentication failure', async () => {
-      mockApiClient.setAuthFailure(true);
+      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
 
       const result = await readPostsToolHandler({}, context);
 
@@ -167,7 +187,7 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle network errors', async () => {
-      mockApiClient.setNetworkFailure(true);
+      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Network error: Failed to fetch'));
 
       const result = await readPostsToolHandler({}, context);
 
@@ -177,7 +197,7 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle API timeout', async () => {
-      mockApiClient.setTimeout(true);
+      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Request timeout after 30000ms'));
 
       const result = await readPostsToolHandler({}, context);
 
@@ -223,7 +243,7 @@ describe('Read Posts Tool', () => {
     });
 
     it('should include error field in failure response', async () => {
-      mockApiClient.setAuthFailure(true);
+      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
 
       const result = await readPostsToolHandler({}, context);
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -415,14 +435,19 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle multiple tags correctly', async () => {
-      // Add a post with multiple tags
-      mockApiClient.addPost({
+      // Mock response with multi-tag post
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [{
         id: 'multi-tag-post',
         team_name: 'test-team',
         author_name: 'agent-test',
         content: 'Post with multiple tags',
         tags: ['development', 'update', 'feature'],
         timestamp: new Date().toISOString(),
+        deleted: false,
+        }],
+        total: 1,
+        has_more: false,
       });
 
       // Should find the post when filtering by any of its tags
@@ -433,48 +458,16 @@ describe('Read Posts Tool', () => {
       expect(multiTagPost).toBeDefined();
     });
 
-    it('should handle thread filtering with nested replies', async () => {
-      // Add nested thread structure
+    it('should call API with thread_id parameter', async () => {
       const rootId = 'thread-root';
-      const reply1Id = 'thread-reply-1';
 
-      mockApiClient.addPost({
-        id: rootId,
-        team_name: 'test-team',
-        author_name: 'agent-root',
-        content: 'Root post',
-        tags: ['discussion'],
-        timestamp: new Date(Date.now() - 3000).toISOString(),
+      await readPostsToolHandler({ thread_id: rootId }, context);
+
+      expect(mockApiClient.fetchPosts).toHaveBeenCalledWith('test-team', {
+        limit: 10,
+        offset: 0,
+        thread_id: rootId,
       });
-
-      mockApiClient.addPost({
-        id: reply1Id,
-        team_name: 'test-team',
-        author_name: 'agent-reply',
-        content: 'Reply to root',
-        tags: ['reply'],
-        timestamp: new Date(Date.now() - 2000).toISOString(),
-        parent_post_id: rootId,
-      });
-
-      mockApiClient.addPost({
-        id: 'thread-reply-2',
-        team_name: 'test-team',
-        author_name: 'agent-nested',
-        content: 'Reply to reply',
-        tags: ['nested'],
-        timestamp: new Date(Date.now() - 1000).toISOString(),
-        parent_post_id: reply1Id,
-      });
-
-      // Filter by root thread ID should get root and direct replies
-      const result = await readPostsToolHandler({ thread_id: rootId }, context);
-
-      const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
-      const threadPosts = response.posts!.filter(
-        (p) => p.id === rootId || p.parent_post_id === rootId
-      );
-      expect(threadPosts.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

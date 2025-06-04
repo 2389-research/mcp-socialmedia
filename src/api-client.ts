@@ -2,6 +2,9 @@
 // ABOUTME: Handles authentication, error handling, and typed responses
 
 import fetch, { RequestInit, Response } from 'node-fetch';
+
+// Type for the fetch function to enable mocking in tests
+export type FetchFunction = typeof fetch;
 import { PostData, PostResponse, PostsResponse, PostQueryOptions } from './types.js';
 import { config } from './config.js';
 
@@ -14,15 +17,18 @@ export class ApiClient implements IApiClient {
   private baseUrl: string;
   private apiKey: string;
   private timeout: number;
+  private fetchFn: FetchFunction;
 
   constructor(
     baseUrl: string = config.socialApiBaseUrl,
     apiKey: string = config.socialApiKey,
-    timeout: number = config.apiTimeout
+    timeout: number = config.apiTimeout,
+    fetchFn: FetchFunction = fetch
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.apiKey = apiKey;
     this.timeout = timeout;
+    this.fetchFn = fetchFn;
   }
 
   /**
@@ -34,9 +40,10 @@ export class ApiClient implements IApiClient {
     if (options?.limit !== undefined) {
       params.append('limit', options.limit.toString());
     }
-    if (options?.offset !== undefined) {
-      params.append('offset', options.offset.toString());
-    }
+    // Remote API uses cursor-based pagination, not numeric offset
+    // For now, we'll ignore the offset parameter since the remote API doesn't support it
+    // TODO: Implement proper cursor-based pagination mapping
+    // Note: remote API may not support agent/tag filters - these params might be ignored
     if (options?.agent_filter) {
       params.append('agent', options.agent_filter);
     }
@@ -53,7 +60,26 @@ export class ApiClient implements IApiClient {
     }`;
 
     const response = await this.makeRequest('GET', url);
-    return response as PostsResponse;
+    const remoteResponse = response as any;
+
+    // Adapt remote response to our schema
+    const adaptedPosts = remoteResponse.posts.map((post: any) => ({
+      id: post.postId,
+      author_name: post.author,
+      content: post.content,
+      tags: post.tags || [],
+      timestamp: post.createdAt?._seconds ? new Date(post.createdAt._seconds * 1000).toISOString() : new Date().toISOString(),
+      parent_post_id: post.parentPostId || undefined,
+      team_name: teamName,
+    }));
+
+    const adaptedResponse: PostsResponse = {
+      posts: adaptedPosts,
+      total: adaptedPosts.length, // Remote API doesn't provide total, estimate from current page
+      has_more: remoteResponse.nextOffset !== null,
+    };
+
+    return adaptedResponse;
   }
 
   /**
@@ -62,8 +88,31 @@ export class ApiClient implements IApiClient {
   async createPost(teamName: string, postData: PostData): Promise<PostResponse> {
     const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts`;
 
-    const response = await this.makeRequest('POST', url, postData);
-    return response as PostResponse;
+    // Adapt to remote API schema - use 'author' instead of 'author_name'
+    const remotePostData = {
+      author: postData.author_name,
+      content: postData.content,
+      tags: postData.tags,
+      parentPostId: postData.parent_post_id,
+    };
+
+    const response = await this.makeRequest('POST', url, remotePostData);
+    const remoteResponse = response as any;
+
+    // Adapt remote response back to our schema
+    const adaptedResponse: PostResponse = {
+      post: {
+        id: remoteResponse.postId,
+        author_name: remoteResponse.author,
+        content: remoteResponse.content,
+        tags: remoteResponse.tags || [],
+        timestamp: remoteResponse.createdAt?._seconds ? new Date(remoteResponse.createdAt._seconds * 1000).toISOString() : new Date().toISOString(),
+        parent_post_id: remoteResponse.parentPostId || undefined,
+        team_name: teamName,
+      },
+    };
+
+    return adaptedResponse;
   }
 
   /**
@@ -77,7 +126,7 @@ export class ApiClient implements IApiClient {
       const options: RequestInit = {
         method,
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          'x-api-key': this.apiKey,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
@@ -88,24 +137,13 @@ export class ApiClient implements IApiClient {
         options.body = JSON.stringify(body);
       }
 
-      // Log request
-      console.error(`[API] ${method} ${url}`);
-      if (body) {
-        console.error('[API] Request body:', JSON.stringify(body, null, 2));
-      }
-
-      const response = await fetch(url, options);
-
-      // Log response
-      console.error(`[API] Response: ${response.status} ${response.statusText}`);
+      const response = await this.fetchFn(url, options);
 
       if (!response.ok) {
         throw await this.handleErrorResponse(response);
       }
 
       const data = await response.json();
-      console.error('[API] Response body:', JSON.stringify(data, null, 2));
-
       return data;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -134,8 +172,7 @@ export class ApiClient implements IApiClient {
       // Ignore JSON parse errors
     }
 
-    // Log the error for debugging
-    console.error(`[API] Error ${response.status}:`, errorMessage);
+    // Error handled, no logging needed for production
 
     switch (response.status) {
       case 401:

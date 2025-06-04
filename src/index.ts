@@ -6,7 +6,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { config, validateConfig } from './config.js';
 import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
-import { MockApiClient } from './mock-api-client.js';
 import { loginToolSchema, loginToolHandler } from './tools/login.js';
 import { readPostsToolSchema, readPostsToolHandler } from './tools/read-posts.js';
 import { createPostToolSchema, createPostToolHandler } from './tools/create-post.js';
@@ -19,20 +18,18 @@ const server = new McpServer({
 // Initialize session manager
 const sessionManager = new SessionManager();
 
-// Initialize API client (use mock for development if specified)
-// Will be used by tools in later implementations
-
-const apiClient = process.env.USE_MOCK_API === 'true' ? new MockApiClient() : new ApiClient();
+// Initialize API client
+const apiClient = new ApiClient();
 
 // Store cleanup interval globally for shutdown
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 // Register the login tool
 server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
-  // Create context for the login tool
+  // Create context for the login tool - use a global session for this MCP server instance
   const toolContext = {
     sessionManager,
-    getSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    getSessionId: () => 'global-session',
   };
 
   return loginToolHandler(args, toolContext);
@@ -50,11 +47,11 @@ server.registerTool('read_posts', readPostsToolSchema, async (args, _mcpContext)
 
 // Register the create_post tool
 server.registerTool('create_post', createPostToolSchema, async (args, _mcpContext) => {
-  // Create context for the create post tool
+  // Create context for the create post tool - use same global session
   const toolContext = {
     sessionManager,
     apiClient,
-    getSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    getSessionId: () => 'global-session',
   };
 
   return createPostToolHandler(args, toolContext);
