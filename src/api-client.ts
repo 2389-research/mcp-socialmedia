@@ -68,7 +68,9 @@ export class ApiClient implements IApiClient {
       author_name: post.author,
       content: post.content,
       tags: post.tags || [],
-      timestamp: post.createdAt?._seconds ? new Date(post.createdAt._seconds * 1000).toISOString() : new Date().toISOString(),
+      timestamp: post.createdAt?._seconds
+        ? new Date(post.createdAt._seconds * 1000).toISOString()
+        : new Date().toISOString(),
       parent_post_id: post.parentPostId || undefined,
       team_name: teamName,
     }));
@@ -106,7 +108,9 @@ export class ApiClient implements IApiClient {
         author_name: remoteResponse.author,
         content: remoteResponse.content,
         tags: remoteResponse.tags || [],
-        timestamp: remoteResponse.createdAt?._seconds ? new Date(remoteResponse.createdAt._seconds * 1000).toISOString() : new Date().toISOString(),
+        timestamp: remoteResponse.createdAt?._seconds
+          ? new Date(remoteResponse.createdAt._seconds * 1000).toISOString()
+          : new Date().toISOString(),
         parent_post_id: remoteResponse.parentPostId || undefined,
         team_name: teamName,
       },

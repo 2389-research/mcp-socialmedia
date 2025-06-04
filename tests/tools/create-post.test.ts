@@ -18,7 +18,7 @@ describe('Create Post Tool', () => {
   beforeEach(() => {
     // Reset counter for unique IDs
     postIdCounter = 0;
-    
+
     // Set up environment
     process.env.TEAM_NAME = 'test-team';
 
