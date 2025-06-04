@@ -5,6 +5,7 @@ import { jest } from '@jest/globals';
 import { loginToolHandler, LoginToolContext } from '../../src/tools/login';
 import { SessionManager } from '../../src/session-manager';
 import { LoginToolResponse } from '../../src/types';
+import { config } from '../../src/config';
 
 describe('Login Tool', () => {
   let sessionManager: SessionManager;
@@ -20,7 +21,7 @@ describe('Login Tool', () => {
     };
 
     // Set up environment
-    process.env.TEAM_NAME = 'test-team';
+    process.env.TEAM_NAME = config.teamName;
   });
 
   describe('Successful login', () => {
@@ -34,7 +35,7 @@ describe('Login Tool', () => {
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.agent_name).toBe(agentName);
-      expect(response.team_name).toBe('test-team');
+      expect(response.team_name).toBe(config.teamName);
       expect(response.session_id).toBeDefined();
 
       // Verify session was created

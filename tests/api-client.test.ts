@@ -14,7 +14,7 @@ describe('ApiClient', () => {
   beforeEach(() => {
     // Create a mocked fetch function
     mockFetch = jest.fn() as jest.MockedFunction<FetchFunction>;
-    
+
     // Create API client with mocked fetch
     apiClient = new ApiClient(baseUrl, apiKey, 30000, mockFetch);
   });
@@ -25,7 +25,24 @@ describe('ApiClient', () => {
 
   describe('fetchPosts', () => {
     it('should fetch posts successfully', async () => {
-      const mockResponse = {
+      // Mock response in remote API format
+      const mockRemoteResponse = {
+        posts: [
+          {
+            postId: 'post-1',
+            teamId: 'test-team',
+            author: 'test-user',
+            content: 'Test content',
+            tags: ['test'],
+            createdAt: { _seconds: 1672531200, _nanoseconds: 0 }, // 2023-01-01T00:00:00Z
+            parentPostId: null,
+          },
+        ],
+        nextOffset: null,
+      };
+
+      // Expected result after schema adaptation
+      const expectedResult = {
         posts: [
           {
             id: 'post-1',
@@ -33,8 +50,7 @@ describe('ApiClient', () => {
             author_name: 'test-user',
             content: 'Test content',
             tags: ['test'],
-            timestamp: '2023-01-01T00:00:00Z',
-            deleted: false,
+            timestamp: '2023-01-01T00:00:00.000Z',
           },
         ],
         total: 1,
@@ -45,18 +61,18 @@ describe('ApiClient', () => {
         ok: true,
         status: 200,
         statusText: 'OK',
-        json: jest.fn().mockResolvedValue(mockResponse),
+        json: jest.fn().mockResolvedValue(mockRemoteResponse),
       } as any);
 
       const result = await apiClient.fetchPosts('test-team');
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual(expectedResult);
       expect(mockFetch).toHaveBeenCalledWith(
         `${baseUrl}/teams/test-team/posts`,
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({
-            Authorization: `Bearer ${apiKey}`,
+            'x-api-key': apiKey,
           }),
         })
       );
@@ -65,7 +81,6 @@ describe('ApiClient', () => {
     it('should include query parameters when provided', async () => {
       const options: PostQueryOptions = {
         limit: 5,
-        offset: 10,
         agent_filter: 'test-agent',
         tag_filter: 'test-tag',
       };
@@ -80,7 +95,7 @@ describe('ApiClient', () => {
       await apiClient.fetchPosts('test-team', options);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('limit=5&offset=10&agent=test-agent&tag=test-tag'),
+        expect.stringContaining('limit=5&agent=test-agent&tag=test-tag'),
         expect.any(Object)
       );
     });
@@ -113,13 +128,26 @@ describe('ApiClient', () => {
         tags: ['test'],
       };
 
-      const mockResponse = {
+      // Mock response in remote API format
+      const mockRemoteResponse = {
+        postId: 'new-post-1',
+        teamId: 'test-team',
+        author: postData.author_name,
+        content: postData.content,
+        tags: postData.tags,
+        createdAt: { _seconds: 1672531200, _nanoseconds: 0 }, // 2023-01-01T00:00:00Z
+        parentPostId: null,
+      };
+
+      // Expected result after schema adaptation
+      const expectedResult = {
         post: {
           id: 'new-post-1',
           team_name: 'test-team',
-          ...postData,
-          timestamp: '2023-01-01T00:00:00Z',
-          deleted: false,
+          author_name: 'test-user',
+          content: 'Test post content',
+          tags: ['test'],
+          timestamp: '2023-01-01T00:00:00.000Z',
         },
       };
 
@@ -127,21 +155,26 @@ describe('ApiClient', () => {
         ok: true,
         status: 201,
         statusText: 'Created',
-        json: jest.fn().mockResolvedValue(mockResponse),
+        json: jest.fn().mockResolvedValue(mockRemoteResponse),
       } as any);
 
       const result = await apiClient.createPost('test-team', postData);
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual(expectedResult);
       expect(mockFetch).toHaveBeenCalledWith(
         `${baseUrl}/teams/test-team/posts`,
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: `Bearer ${apiKey}`,
+            'x-api-key': apiKey,
             'Content-Type': 'application/json',
           }),
-          body: JSON.stringify(postData),
+          body: JSON.stringify({
+            author: postData.author_name,
+            content: postData.content,
+            tags: postData.tags,
+            parentPostId: postData.parent_post_id,
+          }),
         })
       );
     });
@@ -194,9 +227,7 @@ describe('ApiClient', () => {
         json: jest.fn().mockResolvedValue({ error: 'Server error' }),
       } as any);
 
-      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
-        'Server error: Server error'
-      );
+      await expect(apiClient.fetchPosts('test-team')).rejects.toThrow('Server error: Server error');
     });
 
     it('should handle malformed JSON responses', async () => {

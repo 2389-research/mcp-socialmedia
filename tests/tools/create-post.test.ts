@@ -13,8 +13,12 @@ describe('Create Post Tool', () => {
   let mockApiClient: jest.Mocked<ApiClient>;
   let context: CreatePostToolContext;
   let mockGetSessionId: jest.Mock<() => string>;
+  let postIdCounter = 0;
 
   beforeEach(() => {
+    // Reset counter for unique IDs
+    postIdCounter = 0;
+    
     // Set up environment
     process.env.TEAM_NAME = 'test-team';
 
@@ -34,14 +38,13 @@ describe('Create Post Tool', () => {
     // Set up default mock responses
     mockApiClient.createPost.mockImplementation(async (teamName, postData) => ({
       post: {
-        id: `post-${Date.now()}`,
+        id: `post-${Date.now()}-${++postIdCounter}`,
         team_name: teamName,
         author_name: postData.author_name,
         content: postData.content,
         tags: postData.tags || [],
         timestamp: new Date().toISOString(),
         parent_post_id: postData.parent_post_id,
-        deleted: false,
       },
     }));
 
@@ -130,7 +133,7 @@ describe('Create Post Tool', () => {
     it('should call the API client to create posts', async () => {
       await createPostToolHandler({ content: 'New post' }, context);
 
-      expect(mockApiClient.createPost).toHaveBeenCalledWith('test-team', {
+      expect(mockApiClient.createPost).toHaveBeenCalledWith(config.teamName, {
         author_name: 'test-agent',
         content: 'New post',
         tags: undefined,
@@ -276,7 +279,7 @@ describe('Create Post Tool', () => {
         context
       );
 
-      expect(createPostSpy).toHaveBeenCalledWith('test-team', {
+      expect(createPostSpy).toHaveBeenCalledWith(config.teamName, {
         author_name: 'test-agent',
         content: 'API test post',
         tags: ['test', 'api'],
@@ -288,7 +291,7 @@ describe('Create Post Tool', () => {
 
       await createPostToolHandler({ content: 'Team test' }, context);
 
-      expect(createPostSpy).toHaveBeenCalledWith('test-team', expect.any(Object));
+      expect(createPostSpy).toHaveBeenCalledWith(config.teamName, expect.any(Object));
     });
   });
 
@@ -298,7 +301,9 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle API authentication failure', async () => {
-      mockApiClient.createPost.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
+      mockApiClient.createPost.mockRejectedValueOnce(
+        new Error('Authentication failed: Invalid API key')
+      );
 
       const result = await createPostToolHandler({ content: 'Auth fail test' }, context);
 
@@ -447,15 +452,16 @@ describe('Create Post Tool', () => {
 
       // Mock fetchPosts to return a parent post
       mockApiClient.fetchPosts.mockResolvedValue({
-        posts: [{
-          id: 'parent-post-1',
-          team_name: 'test-team',
-          author_name: 'test-author',
-          content: 'This is a parent post',
-          tags: ['discussion'],
-          timestamp: new Date().toISOString(),
-          deleted: false,
-        }],
+        posts: [
+          {
+            id: 'parent-post-1',
+            team_name: config.teamName,
+            author_name: 'test-author',
+            content: 'This is a parent post',
+            tags: ['discussion'],
+            timestamp: new Date().toISOString(),
+          },
+        ],
         total: 1,
         has_more: false,
       });
@@ -524,15 +530,18 @@ describe('Create Post Tool', () => {
 
       // Update mock to include the new reply for nested reply test
       mockApiClient.fetchPosts.mockResolvedValue({
-        posts: [{
-          id: 'parent-post-1',
-          team_name: 'test-team',
-          author_name: 'test-author',
-          content: 'This is a parent post',
-          tags: ['discussion'],
-          timestamp: new Date().toISOString(),
-          deleted: false,
-        }, firstResponse.post!],
+        posts: [
+          {
+            id: 'parent-post-1',
+            team_name: config.teamName,
+            author_name: 'test-author',
+            content: 'This is a parent post',
+            tags: ['discussion'],
+            timestamp: new Date().toISOString(),
+            deleted: false,
+          },
+          firstResponse.post!,
+        ],
         total: 2,
         has_more: false,
       });
@@ -607,7 +616,7 @@ describe('Create Post Tool', () => {
       expect(post.tags).toEqual(tags);
       expect(post.parent_post_id).toBe('parent-post-1');
       expect(post.author_name).toBe('test-agent');
-      expect(post.team_name).toBe('test-team');
+      expect(post.team_name).toBe(config.teamName);
       expect(post.id).toBeDefined();
       expect(post.timestamp).toBeDefined();
     });

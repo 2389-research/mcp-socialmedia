@@ -5,6 +5,7 @@ import { jest } from '@jest/globals';
 import { readPostsToolHandler, ReadPostsToolContext } from '../../src/tools/read-posts';
 import { ApiClient } from '../../src/api-client';
 import { ReadPostsToolResponse, Post } from '../../src/types';
+import { config } from '../../src/config';
 
 describe('Read Posts Tool', () => {
   let mockApiClient: jest.Mocked<ApiClient>;
@@ -12,7 +13,7 @@ describe('Read Posts Tool', () => {
 
   beforeEach(() => {
     // Set up environment
-    process.env.TEAM_NAME = 'test-team';
+    process.env.TEAM_NAME = config.teamName;
 
     mockApiClient = {
       fetchPosts: jest.fn(),
@@ -27,7 +28,7 @@ describe('Read Posts Tool', () => {
       posts: [
         {
           id: 'post-1',
-          team_name: 'test-team',
+          team_name: config.teamName,
           author_name: 'test-user',
           content: 'Test post content',
           tags: ['test'],
@@ -104,6 +105,53 @@ describe('Read Posts Tool', () => {
 
   describe('Pagination', () => {
     it('should handle pagination correctly', async () => {
+      // Mock different responses for different pages
+      mockApiClient.fetchPosts
+        .mockResolvedValueOnce({
+          posts: [
+            {
+              id: 'post-page1-1',
+              team_name: config.teamName,
+              author_name: 'user1',
+              content: 'Page 1 post 1',
+              tags: ['page1'],
+              timestamp: '2023-01-01T00:00:00Z',
+            },
+            {
+              id: 'post-page1-2',
+              team_name: config.teamName,
+              author_name: 'user2',
+              content: 'Page 1 post 2',
+              tags: ['page1'],
+              timestamp: '2023-01-01T01:00:00Z',
+            },
+          ],
+          total: 4,
+          has_more: true,
+        })
+        .mockResolvedValueOnce({
+          posts: [
+            {
+              id: 'post-page2-1',
+              team_name: config.teamName,
+              author_name: 'user3',
+              content: 'Page 2 post 1',
+              tags: ['page2'],
+              timestamp: '2023-01-01T02:00:00Z',
+            },
+            {
+              id: 'post-page2-2',
+              team_name: config.teamName,
+              author_name: 'user4',
+              content: 'Page 2 post 2',
+              tags: ['page2'],
+              timestamp: '2023-01-01T03:00:00Z',
+            },
+          ],
+          total: 4,
+          has_more: false,
+        });
+
       // Get first page
       const page1Result = await readPostsToolHandler({ limit: 2, offset: 0 }, context);
       const page1Response: ReadPostsToolResponse = JSON.parse(page1Result.content[0].text);
@@ -117,6 +165,13 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle large offset values', async () => {
+      // Mock empty response for large offset
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [],
+        total: 0,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler({ offset: 1000 }, context);
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -175,7 +230,9 @@ describe('Read Posts Tool', () => {
 
   describe('Error handling', () => {
     it('should handle API authentication failure', async () => {
-      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
+      mockApiClient.fetchPosts.mockRejectedValueOnce(
+        new Error('Authentication failed: Invalid API key')
+      );
 
       const result = await readPostsToolHandler({}, context);
 
@@ -243,7 +300,9 @@ describe('Read Posts Tool', () => {
     });
 
     it('should include error field in failure response', async () => {
-      mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Authentication failed: Invalid API key'));
+      mockApiClient.fetchPosts.mockRejectedValueOnce(
+        new Error('Authentication failed: Invalid API key')
+      );
 
       const result = await readPostsToolHandler({}, context);
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -261,7 +320,7 @@ describe('Read Posts Tool', () => {
 
       await readPostsToolHandler({}, context);
 
-      expect(fetchPostsSpy).toHaveBeenCalledWith('test-team', expect.any(Object));
+      expect(fetchPostsSpy).toHaveBeenCalledWith(config.teamName, expect.any(Object));
     });
 
     it('should pass correct options to API client', async () => {
@@ -269,7 +328,7 @@ describe('Read Posts Tool', () => {
 
       await readPostsToolHandler({ limit: 15, offset: 5 }, context);
 
-      expect(fetchPostsSpy).toHaveBeenCalledWith('test-team', {
+      expect(fetchPostsSpy).toHaveBeenCalledWith(config.teamName, {
         limit: 15,
         offset: 5,
         agent_filter: undefined,
@@ -281,6 +340,22 @@ describe('Read Posts Tool', () => {
 
   describe('Filtering functionality', () => {
     it('should filter posts by agent name', async () => {
+      // Mock response with posts from agent-alice
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [
+          {
+            id: 'alice-post-1',
+            team_name: config.teamName,
+            author_name: 'agent-alice',
+            content: 'Post by Alice',
+            tags: ['alice'],
+            timestamp: '2023-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler({ agent_filter: 'agent-alice' }, context);
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -290,6 +365,22 @@ describe('Read Posts Tool', () => {
     });
 
     it('should filter posts by tag', async () => {
+      // Mock response with posts tagged 'update'
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [
+          {
+            id: 'update-post-1',
+            team_name: config.teamName,
+            author_name: 'user1',
+            content: 'Update post',
+            tags: ['update', 'news'],
+            timestamp: '2023-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler({ tag_filter: 'update' }, context);
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -299,6 +390,31 @@ describe('Read Posts Tool', () => {
     });
 
     it('should filter posts by thread ID', async () => {
+      // Mock response with thread posts
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [
+          {
+            id: 'post-seed-2',
+            team_name: config.teamName,
+            author_name: 'user1',
+            content: 'Thread root',
+            tags: ['thread'],
+            timestamp: '2023-01-01T00:00:00Z',
+          },
+          {
+            id: 'reply-1',
+            team_name: config.teamName,
+            author_name: 'user2',
+            content: 'Reply to thread',
+            tags: ['reply'],
+            timestamp: '2023-01-01T01:00:00Z',
+            parent_post_id: 'post-seed-2',
+          },
+        ],
+        total: 2,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler({ thread_id: 'post-seed-2' }, context);
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -313,6 +429,22 @@ describe('Read Posts Tool', () => {
     });
 
     it('should support combined filters', async () => {
+      // Mock response for combined filters
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [
+          {
+            id: 'alice-update-1',
+            team_name: config.teamName,
+            author_name: 'agent-alice',
+            content: 'Alice update post',
+            tags: ['update', 'alice'],
+            timestamp: '2023-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler(
         {
           agent_filter: 'agent-alice',
@@ -333,6 +465,13 @@ describe('Read Posts Tool', () => {
     });
 
     it('should handle filters with no matching posts', async () => {
+      // Mock empty response for non-matching filter
+      mockApiClient.fetchPosts.mockResolvedValueOnce({
+        posts: [],
+        total: 0,
+        has_more: false,
+      });
+
       const result = await readPostsToolHandler({ agent_filter: 'non-existent-agent' }, context);
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -352,7 +491,7 @@ describe('Read Posts Tool', () => {
         context
       );
 
-      expect(fetchPostsSpy).toHaveBeenCalledWith('test-team', {
+      expect(fetchPostsSpy).toHaveBeenCalledWith(config.teamName, {
         limit: 10,
         offset: 0,
         agent_filter: 'agent-alice',
@@ -405,6 +544,37 @@ describe('Read Posts Tool', () => {
 
   describe('Complex filtering scenarios', () => {
     it('should handle pagination with filters', async () => {
+      // Mock different pages of alice's posts
+      mockApiClient.fetchPosts
+        .mockResolvedValueOnce({
+          posts: [
+            {
+              id: 'alice-page1',
+              team_name: config.teamName,
+              author_name: 'agent-alice',
+              content: 'Alice post 1',
+              tags: ['alice'],
+              timestamp: '2023-01-01T00:00:00Z',
+            },
+          ],
+          total: 2,
+          has_more: true,
+        })
+        .mockResolvedValueOnce({
+          posts: [
+            {
+              id: 'alice-page2',
+              team_name: config.teamName,
+              author_name: 'agent-alice',
+              content: 'Alice post 2',
+              tags: ['alice'],
+              timestamp: '2023-01-01T01:00:00Z',
+            },
+          ],
+          total: 2,
+          has_more: false,
+        });
+
       // Get first page of alice's posts
       const page1 = await readPostsToolHandler(
         {
@@ -437,15 +607,17 @@ describe('Read Posts Tool', () => {
     it('should handle multiple tags correctly', async () => {
       // Mock response with multi-tag post
       mockApiClient.fetchPosts.mockResolvedValueOnce({
-        posts: [{
-        id: 'multi-tag-post',
-        team_name: 'test-team',
-        author_name: 'agent-test',
-        content: 'Post with multiple tags',
-        tags: ['development', 'update', 'feature'],
-        timestamp: new Date().toISOString(),
-        deleted: false,
-        }],
+        posts: [
+          {
+            id: 'multi-tag-post',
+            team_name: config.teamName,
+            author_name: 'agent-test',
+            content: 'Post with multiple tags',
+            tags: ['development', 'update', 'feature'],
+            timestamp: new Date().toISOString(),
+            deleted: false,
+          },
+        ],
         total: 1,
         has_more: false,
       });
@@ -463,7 +635,7 @@ describe('Read Posts Tool', () => {
 
       await readPostsToolHandler({ thread_id: rootId }, context);
 
-      expect(mockApiClient.fetchPosts).toHaveBeenCalledWith('test-team', {
+      expect(mockApiClient.fetchPosts).toHaveBeenCalledWith(config.teamName, {
         limit: 10,
         offset: 0,
         thread_id: rootId,
