@@ -32,6 +32,8 @@
   "files": [
     "dist/",
     "bin/",
+    "src/",
+    "tsconfig.json",
     "README.md"
   ],
   "dependencies": {
