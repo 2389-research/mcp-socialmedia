@@ -10,16 +10,25 @@ import { readPostsToolHandler } from '../../src/tools/read-posts.js';
 import { createPostToolHandler } from '../../src/tools/create-post.js';
 import { logger } from '../../src/logger.js';
 import { metrics } from '../../src/metrics.js';
+import { config } from '../../src/config.js';
 
 describe('End-to-End Integration Tests', () => {
   let sessionManager: SessionManager;
   let apiClient: jest.Mocked<ApiClient>;
   let sessionId: string;
+  let mockPosts: any[];
+  let postIdCounter: number;
+  let networkFailure: boolean;
 
   beforeEach(() => {
     // Reset environment
     process.env.TEAM_NAME = 'test-team';
     process.env.LOG_LEVEL = 'DEBUG';
+
+    // Initialize state
+    mockPosts = [];
+    postIdCounter = 0;
+    networkFailure = false;
 
     // Initialize components
     sessionManager = new SessionManager();
@@ -28,16 +37,46 @@ describe('End-to-End Integration Tests', () => {
       createPost: jest.fn(),
     } as jest.Mocked<ApiClient>;
 
-    // Set up default mock responses
-    apiClient.fetchPosts.mockResolvedValue({
-      posts: [],
-      total: 0,
-      has_more: false,
+    // Set up mock responses that simulate a real API with persistent state
+    apiClient.fetchPosts.mockImplementation(async (teamName, options) => {
+      if (networkFailure) {
+        throw new Error('Network error during validation');
+      }
+
+      let filteredPosts = [...mockPosts];
+
+      // Apply filters
+      if (options?.agent_filter) {
+        filteredPosts = filteredPosts.filter((p) => p.author_name === options.agent_filter);
+      }
+      if (options?.tag_filter) {
+        filteredPosts = filteredPosts.filter((p) => p.tags?.includes(options.tag_filter));
+      }
+      if (options?.thread_id) {
+        // Include the thread root and all replies
+        filteredPosts = filteredPosts.filter(
+          (p) => p.id === options.thread_id || p.parent_post_id === options.thread_id
+        );
+      }
+
+      const limit = options?.limit || 10;
+      const offset = options?.offset || 0;
+      const paginatedPosts = filteredPosts.slice(offset, offset + limit);
+
+      return {
+        posts: paginatedPosts,
+        total: filteredPosts.length,
+        has_more: offset + limit < filteredPosts.length,
+      };
     });
 
-    apiClient.createPost.mockImplementation(async (teamName, postData) => ({
-      post: {
-        id: `post-${Date.now()}`,
+    apiClient.createPost.mockImplementation(async (teamName, postData) => {
+      if (networkFailure) {
+        throw new Error('Network error');
+      }
+
+      const newPost = {
+        id: `post-${Date.now()}-${++postIdCounter}`,
         team_name: teamName,
         author_name: postData.author_name,
         content: postData.content,
@@ -45,8 +84,14 @@ describe('End-to-End Integration Tests', () => {
         timestamp: new Date().toISOString(),
         parent_post_id: postData.parent_post_id,
         deleted: false,
-      },
-    }));
+      };
+
+      // Add to mock posts array to simulate persistence
+      mockPosts.push(newPost);
+
+      return { post: newPost };
+    });
+
     sessionId = `test-session-${Date.now()}`;
 
     // Reset metrics
@@ -73,6 +118,7 @@ describe('End-to-End Integration Tests', () => {
       const loginResponse = JSON.parse(loginResult.content[0].text);
       expect(loginResponse.success).toBe(true);
       expect(loginResponse.agent_name).toBe('test-agent');
+      expect(loginResponse.team_name).toBe(config.teamName);
       logger.info('Login successful', { agent_name: 'test-agent' });
 
       // Step 2: Read initial posts
@@ -104,6 +150,7 @@ describe('End-to-End Integration Tests', () => {
       const createResponse = JSON.parse(createResult.content[0].text);
       expect(createResponse.success).toBe(true);
       expect(createResponse.post).toBeDefined();
+      expect(createResponse.post.team_name).toBe(config.teamName);
       const newPostId = createResponse.post.id;
       logger.info('Post created', { postId: newPostId });
 
@@ -117,6 +164,7 @@ describe('End-to-End Integration Tests', () => {
       expect(ourPost).toBeDefined();
       expect(ourPost.content).toBe('Integration test post');
       expect(ourPost.author_name).toBe('test-agent');
+      expect(ourPost.team_name).toBe(config.teamName);
       logger.info('Post verified in feed');
     });
   });
@@ -125,16 +173,16 @@ describe('End-to-End Integration Tests', () => {
     it('should handle reply workflow: login → read → create reply → verify threading', async () => {
       logger.info('Starting reply workflow test');
 
-      // Setup: Add a parent post
+      // Setup: Add a parent post to mock posts array
       const parentPost = {
         id: 'parent-post-integration',
-        team_name: 'test-team',
+        team_name: config.teamName,
         author_name: 'other-agent',
         content: 'Parent post for replies',
         tags: ['discussion'],
         timestamp: new Date().toISOString(),
       };
-      apiClient.addPost(parentPost);
+      mockPosts.push(parentPost);
 
       // Step 1: Login
       const loginContext = {
@@ -206,7 +254,7 @@ describe('End-to-End Integration Tests', () => {
       await loginToolHandler({ agent_name: 'error-test-agent' }, loginContext);
 
       // Simulate API failure
-      apiClient.setNetworkFailure(true);
+      networkFailure = true;
 
       // Try to create post
       const createContext = {
@@ -223,7 +271,7 @@ describe('End-to-End Integration Tests', () => {
       logger.warn('API failure handled correctly');
 
       // Reset API
-      apiClient.setNetworkFailure(false);
+      networkFailure = false;
     });
 
     it('should enforce session requirements', async () => {
@@ -285,6 +333,7 @@ describe('End-to-End Integration Tests', () => {
 
         const response = JSON.parse(result.content[0].text);
         expect(response.success).toBe(true);
+        expect(response.post.team_name).toBe(config.teamName);
         postIds.push(response.post.id);
         logger.debug(`Agent ${agent} created post ${response.post.id}`);
       }

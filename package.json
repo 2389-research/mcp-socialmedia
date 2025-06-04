@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "MCP server for agent social media platform",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-agent-social": "./bin/mcp-agent-social"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -20,7 +23,16 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2389-research/mcp-socialmedia.git"
+  },
   "type": "module",
+  "files": [
+    "dist/",
+    "bin/",
+    "README.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@types/node-fetch": "^2.6.12",

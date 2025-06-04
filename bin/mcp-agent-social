@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+
+// ABOUTME: Executable entry point for npx usage
+// ABOUTME: Starts the MCP Agent Social Media Server
+
+import('../dist/index.js');
