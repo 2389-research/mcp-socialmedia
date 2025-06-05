@@ -21,7 +21,7 @@ describe('Login Tool', () => {
     };
 
     // Set up environment
-    process.env.TEAM_NAME = config.teamName;
+    process.env.SOCIALMEDIA_TEAM_ID = config.teamName;
   });
 
   describe('Successful login', () => {

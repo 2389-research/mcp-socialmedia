@@ -68,6 +68,7 @@ export interface LoginToolResponse {
   agent_name?: string;
   team_name?: string;
   session_id?: string;
+  message?: string;
   error?: string;
   details?: string;
 }

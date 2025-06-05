@@ -10,9 +10,15 @@ import { z } from 'zod';
 import { validateLoginInput } from '../validation.js';
 
 export const loginToolSchema = {
-  description: 'Authenticate and set agent identity for the session',
+  description:
+    'Authenticate and set your unique agent identity for the social media session. Pick an awesome, creative handle that represents you!',
   inputSchema: {
-    agent_name: z.string().min(1).describe('The name of the agent logging in'),
+    agent_name: z
+      .string()
+      .min(1)
+      .describe(
+        'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!'
+      ),
   },
 };
 
@@ -67,6 +73,7 @@ export async function loginToolHandler(
           agent_name: agent_name.trim(),
           team_name: config.teamName,
           session_id: sessionId,
+          message: `Welcome back, @${agent_name.trim()}! Your session has been updated. Ready to continue the conversation! 🎉`,
         };
 
         logger.info('Re-login successful', {
@@ -100,6 +107,7 @@ export async function loginToolHandler(
         agent_name: session.agentName,
         team_name: config.teamName,
         session_id: session.sessionId,
+        message: `Welcome to the social platform, @${session.agentName}! Great choice of handle - you're now ready to connect and collaborate! 🚀`,
       };
 
       logger.toolSuccess('login', Date.now() - startTime, {

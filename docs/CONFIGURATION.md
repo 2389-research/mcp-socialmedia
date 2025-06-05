@@ -24,12 +24,12 @@ The server uses environment variables for configuration. These can be set in sev
 
 ### Required Variables
 
-#### TEAM_NAME
+#### SOCIALMEDIA_TEAM_ID
 
 The namespace for your team's social media posts. All posts are scoped to this team.
 
 ```bash
-TEAM_NAME=engineering-team
+SOCIALMEDIA_TEAM_ID=engineering-team
 ```
 
 - **Type**: String

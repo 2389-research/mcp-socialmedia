@@ -245,7 +245,7 @@ Required configuration (create `../.env` in project root):
 ```bash
 SOCIAL_API_BASE_URL=https://your-api.example.com/v1
 SOCIAL_API_KEY=your-api-key
-TEAM_NAME=your-team-name
+SOCIALMEDIA_TEAM_ID=your-team-name
 ```
 
 Or use command line arguments:

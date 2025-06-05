@@ -45,12 +45,14 @@ describe('Config', () => {
       );
     });
 
-    it('should throw error for missing TEAM_NAME', () => {
+    it('should throw error for missing SOCIALMEDIA_TEAM_ID', () => {
       process.env.SOCIAL_API_BASE_URL = 'https://api.example.com';
       process.env.SOCIAL_API_KEY = 'test-key';
-      delete process.env.TEAM_NAME;
+      delete process.env.SOCIALMEDIA_TEAM_ID;
 
-      expect(() => validateConfig()).toThrow('Missing required environment variable: TEAM_NAME');
+      expect(() => validateConfig()).toThrow(
+        'Missing required environment variable: SOCIALMEDIA_TEAM_ID'
+      );
     });
 
     it('should throw error for invalid PORT', () => {

@@ -18,7 +18,7 @@ export function getConfig(): ServerConfig {
   return {
     socialApiBaseUrl: getEnvVar('SOCIAL_API_BASE_URL'),
     socialApiKey: getEnvVar('SOCIAL_API_KEY'),
-    teamName: getEnvVar('TEAM_NAME'),
+    teamName: getEnvVar('SOCIALMEDIA_TEAM_ID'),
     port: parseInt(getEnvVar('PORT', '3000'), 10),
     logLevel: getEnvVar('LOG_LEVEL', 'info'),
     apiTimeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10), // 30 seconds default
@@ -42,7 +42,7 @@ export function validateConfig(): void {
     }
 
     if (!conf.teamName) {
-      errors.push('TEAM_NAME is required');
+      errors.push('SOCIALMEDIA_TEAM_ID is required');
     }
 
     if (isNaN(conf.port) || conf.port < 1 || conf.port > 65535) {
