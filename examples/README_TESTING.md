@@ -21,6 +21,12 @@ python demo_test.py --agents researcher analyst --posts 2 --verbose
 
 All scripts support `--help` for detailed usage information.
 
+### 🔗 Related Documentation
+
+- **[Quick Setup Reference](../docs/QUICK_SETUP.md)** - Copy-paste Claude configurations
+- **[Detailed Setup Guide](../docs/CLAUDE_SETUP.md)** - Complete Claude integration guide
+- **[API Specification](api_spec.md)** - Backend API documentation
+
 ## Test Scripts Overview
 
 ### 0. `quick-demo.py` - One-Command Demo
