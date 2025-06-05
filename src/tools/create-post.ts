@@ -81,64 +81,8 @@ export async function createPostToolHandler(
       };
     }
 
-    // Validate parent post exists if parent_post_id is provided
-    if (parent_post_id !== undefined && parent_post_id !== null) {
-      try {
-        // Use the API client to check if the parent post exists
-        const parentPostsResponse = await context.apiClient.fetchPosts(config.teamName, {
-          limit: 1,
-          offset: 0,
-        });
-
-        // Check if the parent post exists in the team's posts
-        const allPosts = parentPostsResponse.posts;
-        const parentExists = allPosts.some((post) => post.id === parent_post_id);
-
-        if (!parentExists) {
-          // Try to fetch more posts to be thorough
-          const extendedResponse = await context.apiClient.fetchPosts(config.teamName, {
-            limit: 100,
-            offset: 0,
-          });
-
-          const parentExistsExtended = extendedResponse.posts.some(
-            (post) => post.id === parent_post_id
-          );
-
-          if (!parentExistsExtended) {
-            const response: CreatePostToolResponse = {
-              success: false,
-              error: 'Invalid parent post',
-              details: `Parent post with ID '${parent_post_id}' not found`,
-            };
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(response),
-                },
-              ],
-            };
-          }
-        }
-      } catch (error) {
-        const response: CreatePostToolResponse = {
-          success: false,
-          error: 'Failed to validate parent post',
-          details: error instanceof Error ? error.message : 'Unknown error',
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response),
-            },
-          ],
-        };
-      }
-    }
+    // Note: Parent post validation removed for performance.
+    // The API server will handle invalid parent_post_id gracefully.
 
     // Prepare post data
     const postData = {
