@@ -5,11 +5,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Path
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, String, or_
 
 from ..database import get_db
 from ..models import Post, Team
-from ..schemas import PostsResponse, Post as PostSchema, PostCreate, PostResponse, ErrorResponse
+from ..schemas import PostsResponse, Post as PostSchema, PostCreate, PostResponse, ErrorResponse, RemotePost
 from ..middleware.auth import require_team_access, AuthenticatedRequest
 from ..middleware.rate_limit import limiter, rate_limit_posts_read, rate_limit_posts_write
 from ..logging_config import get_logger, mask_api_key
@@ -38,6 +38,9 @@ async def list_posts(
     request: Request = None,
     limit: Annotated[int, Query(ge=1, le=100, description="Number of posts to return")] = 10,
     offset: Annotated[int, Query(ge=0, description="Number of posts to skip for pagination")] = 0,
+    agent: Annotated[str, Query(description="Filter posts by author name")] = None,
+    tag: Annotated[str, Query(description="Filter posts by tag")] = None,
+    thread_id: Annotated[str, Query(description="Get posts in a specific thread")] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -52,17 +55,35 @@ async def list_posts(
     # Verify authentication and team access
     auth_info = await require_team_access(request, team)
 
-    # Count total posts (excluding deleted)
-    count_query = select(func.count(Post.id)).where(
-        and_(Post.team_id == auth_info.team_id, Post.deleted == False)
-    )
+    # Build filter conditions
+    filter_conditions = [Post.team_id == auth_info.team_id, Post.deleted == False]
+
+    if agent:
+        filter_conditions.append(Post.author_name == agent)
+
+    if tag:
+        # For SQLite, use a simple string containment check
+        # In production, this should use proper JSON path queries
+        filter_conditions.append(Post.tags.cast(String).contains(f'"{tag}"'))
+
+    if thread_id:
+        # Get posts that are either the thread root or replies in the thread
+        filter_conditions.append(
+            or_(
+                Post.id == thread_id,
+                Post.parent_post_id == thread_id
+            )
+        )
+
+    # Count total posts with filters
+    count_query = select(func.count(Post.id)).where(and_(*filter_conditions))
     count_result = await db.execute(count_query)
     total = count_result.scalar()
 
-    # Get posts with pagination
+    # Get posts with pagination and filters
     posts_query = (
         select(Post)
-        .where(and_(Post.team_id == auth_info.team_id, Post.deleted == False))
+        .where(and_(*filter_conditions))
         .order_by(Post.timestamp.desc())
         .offset(offset)
         .limit(limit)
@@ -70,25 +91,25 @@ async def list_posts(
     posts_result = await db.execute(posts_query)
     posts_data = posts_result.scalars().all()
 
-    # Convert to response schema
+    # Convert to external API format
     posts = []
     for post in posts_data:
-        post_dict = {
-            "id": post.id,
-            "author_name": post.author_name,
-            "content": post.content,
-            "tags": post.tags or [],
-            "timestamp": post.timestamp,
-            "parent_post_id": post.parent_post_id,
-            "deleted": post.deleted,
-            "team_name": auth_info.team_name,
-        }
-        posts.append(PostSchema(**post_dict))
+        remote_post = RemotePost(
+            postId=post.id,
+            author=post.author_name,
+            content=post.content,
+            tags=post.tags or [],
+            parentPostId=post.parent_post_id,
+            createdAt={"_seconds": int(post.timestamp.timestamp())}
+        )
+        posts.append(remote_post)
 
-    # Determine if there are more posts
-    has_more = (offset + limit) < total
+    # Determine next offset (cursor-based pagination simulation)
+    next_offset = None
+    if (offset + limit) < total:
+        next_offset = str(offset + limit)
 
-    return PostsResponse(posts=posts, total=total, has_more=has_more)
+    return PostsResponse(posts=posts, nextOffset=next_offset)
 
 
 @router.post(
@@ -129,11 +150,11 @@ async def create_post(
     # Verify authentication and team access
     auth_info = await require_team_access(request, team)
 
-    # If parent_post_id is provided, verify it exists and belongs to same team
-    if post_data.parent_post_id:
+    # If parentPostId is provided, verify it exists and belongs to same team
+    if post_data.parentPostId:
         parent_query = select(Post).where(
             and_(
-                Post.id == post_data.parent_post_id,
+                Post.id == post_data.parentPostId,
                 Post.team_id == auth_info.team_id,
                 Post.deleted == False,
             )
@@ -144,16 +165,16 @@ async def create_post(
         if not parent_post:
             raise HTTPException(
                 status_code=404,
-                detail=f"Parent post '{post_data.parent_post_id}' not found in team '{team}'",
+                detail=f"Parent post '{post_data.parentPostId}' not found in team '{team}'",
             )
 
     # Create the new post
     new_post = Post(
         team_id=auth_info.team_id,
-        author_name=post_data.author_name,
+        author_name=post_data.author,
         content=post_data.content,
         tags=post_data.tags,
-        parent_post_id=post_data.parent_post_id,
+        parent_post_id=post_data.parentPostId,
     )
 
     db.add(new_post)
@@ -167,28 +188,24 @@ async def create_post(
             "event_type": "post_created",
             "post_id": new_post.id,
             "team_name": auth_info.team_name,
-            "author_name": post_data.author_name,
-            "is_reply": post_data.parent_post_id is not None,
-            "parent_post_id": post_data.parent_post_id,
+            "author_name": post_data.author,
+            "is_reply": post_data.parentPostId is not None,
+            "parent_post_id": post_data.parentPostId,
             "content_length": len(post_data.content),
             "tag_count": len(post_data.tags or []),
             "api_key_masked": mask_api_key(auth_info.api_key),
         },
     )
 
-    # Convert to response schema
-    post_dict = {
-        "id": new_post.id,
-        "author_name": new_post.author_name,
-        "content": new_post.content,
-        "tags": new_post.tags or [],
-        "timestamp": new_post.timestamp,
-        "parent_post_id": new_post.parent_post_id,
-        "deleted": new_post.deleted,
-        "team_name": auth_info.team_name,
-    }
-
-    return PostResponse(post=PostSchema(**post_dict))
+    # Convert to external API format
+    return PostResponse(
+        postId=new_post.id,
+        author=new_post.author_name,
+        content=new_post.content,
+        tags=new_post.tags or [],
+        parentPostId=new_post.parent_post_id,
+        createdAt={"_seconds": int(new_post.timestamp.timestamp())}
+    )
 
 
 @router.get(
@@ -235,19 +252,15 @@ async def get_post(
     if not post:
         raise HTTPException(status_code=404, detail=f"Post '{post_id}' not found in team '{team}'")
 
-    # Convert to response schema
-    post_dict = {
-        "id": post.id,
-        "author_name": post.author_name,
-        "content": post.content,
-        "tags": post.tags or [],
-        "timestamp": post.timestamp,
-        "parent_post_id": post.parent_post_id,
-        "deleted": post.deleted,
-        "team_name": auth_info.team_name,
-    }
-
-    return PostResponse(post=PostSchema(**post_dict))
+    # Convert to external API format
+    return PostResponse(
+        postId=post.id,
+        author=post.author_name,
+        content=post.content,
+        tags=post.tags or [],
+        parentPostId=post.parent_post_id,
+        createdAt={"_seconds": int(post.timestamp.timestamp())}
+    )
 
 
 @router.delete(

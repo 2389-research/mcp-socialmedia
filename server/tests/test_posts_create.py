@@ -78,7 +78,7 @@ async def test_create_post_success(setup_test_team):
     api_key = test_data["api_key"]
 
     post_data = {
-        "author_name": "alice",
+        "author": "alice",
         "content": "Hello world! This is my first post.",
         "tags": ["greeting", "first-post"],
     }
@@ -88,17 +88,18 @@ async def test_create_post_success(setup_test_team):
     assert response.status_code == 201
 
     data = response.json()
-    assert "post" in data
+    assert "postId" in data
+    assert "author" in data
+    assert "content" in data
+    assert "createdAt" in data
 
-    post = data["post"]
-    assert post["author_name"] == "alice"
-    assert post["content"] == "Hello world! This is my first post."
-    assert post["tags"] == ["greeting", "first-post"]
-    assert post["team_name"] == team_name
-    assert post["parent_post_id"] is None
-    assert post["deleted"] is False
-    assert post["id"] is not None
-    assert post["timestamp"] is not None
+    assert data["author"] == "alice"
+    assert data["content"] == "Hello world! This is my first post."
+    assert data["tags"] == ["greeting", "first-post"]
+    assert data["parentPostId"] is None
+    assert data["postId"] is not None
+    assert data["createdAt"] is not None
+    assert "_seconds" in data["createdAt"]
 
 
 @pytest.mark.asyncio
@@ -108,18 +109,17 @@ async def test_create_post_minimal_data(setup_test_team):
     team_name = test_data["team_name"]
     api_key = test_data["api_key"]
 
-    post_data = {"author_name": "bob", "content": "Minimal post"}
+    post_data = {"author": "bob", "content": "Minimal post"}
 
     headers = {"Authorization": f"Bearer {api_key}"}
     response = client.post(f"/v1/teams/{team_name}/posts", json=post_data, headers=headers)
     assert response.status_code == 201
 
     data = response.json()
-    post = data["post"]
-    assert post["author_name"] == "bob"
-    assert post["content"] == "Minimal post"
-    assert post["tags"] == []  # Should default to empty list
-    assert post["parent_post_id"] is None
+    assert data["author"] == "bob"
+    assert data["content"] == "Minimal post"
+    assert data["tags"] == []  # Should default to empty list
+    assert data["parentPostId"] is None
 
 
 @pytest.mark.asyncio
@@ -131,10 +131,10 @@ async def test_create_reply_success(setup_test_team_with_post):
     parent_post_id = test_data["parent_post_id"]
 
     reply_data = {
-        "author_name": "charlie",
+        "author": "charlie",
         "content": "This is a reply to the parent post",
         "tags": ["reply"],
-        "parent_post_id": parent_post_id,
+        "parentPostId": parent_post_id,
     }
 
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -142,10 +142,9 @@ async def test_create_reply_success(setup_test_team_with_post):
     assert response.status_code == 201
 
     data = response.json()
-    post = data["post"]
-    assert post["author_name"] == "charlie"
-    assert post["content"] == "This is a reply to the parent post"
-    assert post["parent_post_id"] == parent_post_id
+    assert data["author"] == "charlie"
+    assert data["content"] == "This is a reply to the parent post"
+    assert data["parentPostId"] == parent_post_id
 
 
 @pytest.mark.asyncio
@@ -156,7 +155,7 @@ async def test_create_post_validation_errors(setup_test_team):
     api_key = test_data["api_key"]
     headers = {"Authorization": f"Bearer {api_key}"}
 
-    # Test missing author_name
+    # Test missing author
     response = client.post(
         f"/v1/teams/{team_name}/posts", json={"content": "Missing author"}, headers=headers
     )
@@ -164,22 +163,22 @@ async def test_create_post_validation_errors(setup_test_team):
 
     # Test missing content
     response = client.post(
-        f"/v1/teams/{team_name}/posts", json={"author_name": "alice"}, headers=headers
+        f"/v1/teams/{team_name}/posts", json={"author": "alice"}, headers=headers
     )
     assert response.status_code == 422
 
     # Test empty content
     response = client.post(
         f"/v1/teams/{team_name}/posts",
-        json={"author_name": "alice", "content": ""},
+        json={"author": "alice", "content": ""},
         headers=headers,
     )
     assert response.status_code == 422
 
-    # Test empty author_name
+    # Test empty author
     response = client.post(
         f"/v1/teams/{team_name}/posts",
-        json={"author_name": "", "content": "Valid content"},
+        json={"author": "", "content": "Valid content"},
         headers=headers,
     )
     assert response.status_code == 422
@@ -197,7 +196,7 @@ async def test_create_post_content_length_limits(setup_test_team):
     long_content = "x" * 10001
     response = client.post(
         f"/v1/teams/{team_name}/posts",
-        json={"author_name": "alice", "content": long_content},
+        json={"author": "alice", "content": long_content},
         headers=headers,
     )
     assert response.status_code == 422
@@ -215,7 +214,7 @@ async def test_create_post_tags_validation(setup_test_team):
     too_many_tags = [f"tag-{i}" for i in range(21)]
     response = client.post(
         f"/v1/teams/{team_name}/posts",
-        json={"author_name": "alice", "content": "Valid content", "tags": too_many_tags},
+        json={"author": "alice", "content": "Valid content", "tags": too_many_tags},
         headers=headers,
     )
     assert response.status_code == 422
@@ -225,10 +224,10 @@ def test_create_post_team_not_found():
     """Test creating post for non-existent team (should fail on auth first)."""
     response = client.post(
         "/v1/teams/non-existent-team/posts",
-        json={"author_name": "alice", "content": "This should fail"},
+        json={"author": "alice", "content": "This should fail"},
     )
     assert response.status_code == 401
-    assert "Invalid or missing API key" in response.json()["detail"]
+    assert "Invalid or missing API key" in response.json()["detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -242,14 +241,14 @@ async def test_create_reply_invalid_parent(setup_test_team):
     response = client.post(
         f"/v1/teams/{team_name}/posts",
         json={
-            "author_name": "alice",
+            "author": "alice",
             "content": "Reply to non-existent post",
-            "parent_post_id": "non-existent-post-id",
+            "parentPostId": "non-existent-post-id",
         },
         headers=headers,
     )
     assert response.status_code == 404
-    assert "Parent post 'non-existent-post-id' not found" in response.json()["detail"]
+    assert "Parent post 'non-existent-post-id' not found" in response.json()["detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -278,11 +277,11 @@ async def test_create_reply_parent_from_different_team(setup_test_team_with_post
     response = client.post(
         f"/v1/teams/{other_team_name}/posts",
         json={
-            "author_name": "alice",
+            "author": "alice",
             "content": "Cross-team reply attempt",
-            "parent_post_id": parent_post_id,
+            "parentPostId": parent_post_id,
         },
         headers=headers,
     )
     assert response.status_code == 404
-    assert f"Parent post '{parent_post_id}' not found" in response.json()["detail"]
+    assert f"Parent post '{parent_post_id}' not found" in response.json()["detail"]["error"]

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.main import app
 from src.database import async_session_maker, init_db
-from src.models import Team, Post
+from src.models import Team, Post, ApiKey
 
 
 client = TestClient(app)
@@ -49,7 +49,12 @@ async def setup_test_data():
 
         await session.commit()
 
-        yield {"team_name": team.name, "team_id": team.id, "posts": posts}
+        # Create API key for the team
+        api_key = ApiKey(key=f"test-key-{uuid.uuid4()}", team_id=team.id)
+        session.add(api_key)
+        await session.commit()
+
+        yield {"team_name": team.name, "team_id": team.id, "posts": posts, "api_key": api_key.key}
 
 
 @pytest.mark.asyncio
@@ -57,18 +62,25 @@ async def test_list_posts_default_pagination(setup_test_data):
     """Test listing posts with default pagination parameters."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
-    response = client.get(f"/v1/teams/{team_name}/posts")
+    response = client.get(f"/v1/teams/{team_name}/posts", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
     assert "posts" in data
-    assert "total" in data
-    assert "has_more" in data
+    assert "nextOffset" in data
 
     assert len(data["posts"]) == 10  # Default limit
-    assert data["total"] == 15  # Total non-deleted posts
-    assert data["has_more"] is True  # More posts available
+    assert data["nextOffset"] is not None  # More posts available
+
+    # Check post structure
+    post = data["posts"][0]
+    assert "postId" in post
+    assert "author" in post
+    assert "content" in post
+    assert "createdAt" in post
 
 
 @pytest.mark.asyncio
@@ -76,14 +88,15 @@ async def test_list_posts_custom_pagination(setup_test_data):
     """Test listing posts with custom limit and offset."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
-    response = client.get(f"/v1/teams/{team_name}/posts?limit=5&offset=5")
+    response = client.get(f"/v1/teams/{team_name}/posts?limit=5&offset=5", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
     assert len(data["posts"]) == 5
-    assert data["total"] == 15
-    assert data["has_more"] is True
+    assert data["nextOffset"] is not None
 
 
 @pytest.mark.asyncio
@@ -91,14 +104,15 @@ async def test_list_posts_last_page(setup_test_data):
     """Test listing posts on the last page."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
-    response = client.get(f"/v1/teams/{team_name}/posts?limit=10&offset=10")
+    response = client.get(f"/v1/teams/{team_name}/posts?limit=10&offset=10", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
     assert len(data["posts"]) == 5  # Remaining posts
-    assert data["total"] == 15
-    assert data["has_more"] is False  # No more posts
+    assert data["nextOffset"] is None  # No more posts
 
 
 @pytest.mark.asyncio
@@ -106,13 +120,15 @@ async def test_list_posts_limit_validation(setup_test_data):
     """Test that invalid limit values are rejected."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
     # Test limit too high
-    response = client.get(f"/v1/teams/{team_name}/posts?limit=101")
+    response = client.get(f"/v1/teams/{team_name}/posts?limit=101", headers=headers)
     assert response.status_code == 422
 
     # Test limit too low
-    response = client.get(f"/v1/teams/{team_name}/posts?limit=0")
+    response = client.get(f"/v1/teams/{team_name}/posts?limit=0", headers=headers)
     assert response.status_code == 422
 
 
@@ -121,17 +137,19 @@ async def test_list_posts_offset_validation(setup_test_data):
     """Test that invalid offset values are rejected."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
     # Test negative offset
-    response = client.get(f"/v1/teams/{team_name}/posts?offset=-1")
+    response = client.get(f"/v1/teams/{team_name}/posts?offset=-1", headers=headers)
     assert response.status_code == 422
 
 
 def test_list_posts_team_not_found():
-    """Test that 404 is returned for non-existent team."""
+    """Test that 401 is returned for missing API key (auth happens first)."""
     response = client.get("/v1/teams/non-existent-team/posts")
-    assert response.status_code == 404
-    assert "Team 'non-existent-team' not found" in response.json()["detail"]
+    assert response.status_code == 401
+    assert "Invalid or missing API key" in response.json()["detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -139,15 +157,15 @@ async def test_list_posts_excludes_deleted(setup_test_data):
     """Test that deleted posts are not included in results."""
     test_data = setup_test_data
     team_name = test_data["team_name"]
+    api_key = test_data["api_key"]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
-    response = client.get(f"/v1/teams/{team_name}/posts?limit=100")
+    response = client.get(f"/v1/teams/{team_name}/posts?limit=100", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
     # Should have 15 posts, not 16 (excluding the deleted one)
-    assert data["total"] == 15
     assert len(data["posts"]) == 15
-
-    # Verify no deleted posts in response
+    # Check that none of the posts are deleted posts (by content check)
     for post in data["posts"]:
-        assert post["deleted"] is False
+        assert post["content"] != "This post should not appear"

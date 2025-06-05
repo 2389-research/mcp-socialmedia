@@ -36,16 +36,42 @@ class PostBase(BaseModel):
     )
 
 
-class PostCreate(PostBase):
-    """Schema for creating a new post or reply."""
+class PostCreate(BaseModel):
+    """Schema for creating a new post or reply - matches external API format."""
+
+    author: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Name of the post author",
+        json_schema_extra={"example": "alice"},
+    )
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=10000,
+        description="Post content text",
+        json_schema_extra={"example": "Hello world! This is my first post."},
+    )
+    tags: Optional[List[str]] = Field(
+        None,
+        max_length=20,
+        description="List of tags associated with the post",
+        json_schema_extra={"example": ["greeting", "first-post"]},
+    )
+    parentPostId: Optional[str] = Field(
+        None,
+        description="ID of parent post if this is a reply",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"},
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "author_name": "alice",
+                "author": "alice",
                 "content": "Hello world! This is my first post.",
                 "tags": ["greeting", "first-post"],
-                "parent_post_id": None,
+                "parentPostId": None,
             }
         }
     )
@@ -76,53 +102,61 @@ class Post(PostBase):
     )
 
 
-class PostsResponse(BaseModel):
-    """Schema for paginated posts response."""
+class RemotePost(BaseModel):
+    """Schema for posts in external API format."""
 
-    posts: List[Post] = Field(..., description="List of posts for the current page")
-    total: int = Field(..., description="Total number of posts in the team")
-    has_more: bool = Field(..., description="Whether there are more posts beyond this page")
+    postId: str = Field(..., description="Unique post identifier")
+    author: str = Field(..., description="Name of the post author")
+    content: str = Field(..., description="Post content text")
+    tags: List[str] = Field(default_factory=list, description="List of tags associated with the post")
+    parentPostId: Optional[str] = Field(None, description="ID of parent post if this is a reply")
+    createdAt: dict = Field(..., description="Creation timestamp with _seconds field")
+
+
+class PostsResponse(BaseModel):
+    """Schema for paginated posts response - matches external API format."""
+
+    posts: List[RemotePost] = Field(..., description="List of posts for the current page")
+    nextOffset: Optional[str] = Field(None, description="Cursor for next page of results")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "posts": [
                     {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "author_name": "alice",
+                        "postId": "550e8400-e29b-41d4-a716-446655440000",
+                        "author": "alice",
                         "content": "Hello world! This is my first post.",
                         "tags": ["greeting", "first-post"],
-                        "parent_post_id": None,
-                        "team_name": "my-team",
-                        "timestamp": "2023-01-01T12:00:00Z",
-                        "deleted": False,
+                        "parentPostId": None,
+                        "createdAt": {"_seconds": 1672574400}
                     }
                 ],
-                "total": 1,
-                "has_more": False,
+                "nextOffset": None
             }
         }
     )
 
 
 class PostResponse(BaseModel):
-    """Schema for single post response."""
+    """Schema for single post response - matches external API format."""
 
-    post: Post = Field(..., description="The requested post")
+    postId: str = Field(..., description="Unique post identifier")
+    author: str = Field(..., description="Name of the post author")
+    content: str = Field(..., description="Post content text")
+    tags: List[str] = Field(default_factory=list, description="List of tags associated with the post")
+    parentPostId: Optional[str] = Field(None, description="ID of parent post if this is a reply")
+    createdAt: dict = Field(..., description="Creation timestamp with _seconds field")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "post": {
-                    "id": "550e8400-e29b-41d4-a716-446655440000",
-                    "author_name": "alice",
-                    "content": "Hello world! This is my first post.",
-                    "tags": ["greeting", "first-post"],
-                    "parent_post_id": None,
-                    "team_name": "my-team",
-                    "timestamp": "2023-01-01T12:00:00Z",
-                    "deleted": False,
-                }
+                "postId": "550e8400-e29b-41d4-a716-446655440000",
+                "author": "alice",
+                "content": "Hello world! This is my first post.",
+                "tags": ["greeting", "first-post"],
+                "parentPostId": None,
+                "createdAt": {"_seconds": 1672574400}
             }
         }
     )

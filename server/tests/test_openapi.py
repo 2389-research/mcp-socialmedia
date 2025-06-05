@@ -105,7 +105,7 @@ def test_openapi_contains_post_schemas():
     schemas = data["components"]["schemas"]
 
     # Check for post-related schemas
-    expected_schemas = ["PostCreate", "Post", "PostResponse", "PostsResponse", "HealthResponse"]
+    expected_schemas = ["PostCreate", "RemotePost", "PostResponse", "PostsResponse", "HealthResponse"]
 
     for schema_name in expected_schemas:
         assert schema_name in schemas, f"Schema {schema_name} not found in OpenAPI spec"
@@ -237,3 +237,55 @@ def test_openapi_security_requirements():
     assert len(security) == 0 or security == [
         {}
     ], "Health endpoint should not require authentication"
+
+
+def test_openapi_schema_field_names():
+    """Test that schemas have the correct field names matching the new API structure."""
+    response = client.get("/v1/openapi.json")
+    data = response.json()
+
+    schemas = data["components"]["schemas"]
+
+    # Check PostCreate schema fields
+    post_create = schemas["PostCreate"]
+    post_create_props = post_create["properties"]
+    assert "author" in post_create_props, "PostCreate should have 'author' field"
+    assert "content" in post_create_props, "PostCreate should have 'content' field"
+    assert "tags" in post_create_props, "PostCreate should have 'tags' field"
+    assert "parentPostId" in post_create_props, "PostCreate should have 'parentPostId' field"
+
+    # Check RemotePost schema fields
+    remote_post = schemas["RemotePost"]
+    remote_post_props = remote_post["properties"]
+    assert "postId" in remote_post_props, "RemotePost should have 'postId' field"
+    assert "author" in remote_post_props, "RemotePost should have 'author' field"
+    assert "content" in remote_post_props, "RemotePost should have 'content' field"
+    assert "tags" in remote_post_props, "RemotePost should have 'tags' field"
+    assert "parentPostId" in remote_post_props, "RemotePost should have 'parentPostId' field"
+    assert "createdAt" in remote_post_props, "RemotePost should have 'createdAt' field"
+
+    # Check PostResponse schema fields
+    post_response = schemas["PostResponse"]
+    post_response_props = post_response["properties"]
+    assert "postId" in post_response_props, "PostResponse should have 'postId' field"
+    assert "author" in post_response_props, "PostResponse should have 'author' field"
+    assert "content" in post_response_props, "PostResponse should have 'content' field"
+    assert "tags" in post_response_props, "PostResponse should have 'tags' field"
+    assert "parentPostId" in post_response_props, "PostResponse should have 'parentPostId' field"
+    assert "createdAt" in post_response_props, "PostResponse should have 'createdAt' field"
+
+    # Check PostsResponse schema fields
+    posts_response = schemas["PostsResponse"]
+    posts_response_props = posts_response["properties"]
+    assert "posts" in posts_response_props, "PostsResponse should have 'posts' field"
+    assert "nextOffset" in posts_response_props, "PostsResponse should have 'nextOffset' field"
+
+    # Verify old field names are NOT present in new schemas
+    assert "author_name" not in remote_post_props, "RemotePost should not have 'author_name' field"
+    assert "parent_post_id" not in remote_post_props, "RemotePost should not have 'parent_post_id' field"
+    assert "id" not in remote_post_props, "RemotePost should not have 'id' field"
+    assert "timestamp" not in remote_post_props, "RemotePost should not have 'timestamp' field"
+    assert "deleted" not in remote_post_props, "RemotePost should not have 'deleted' field"
+    assert "team_name" not in remote_post_props, "RemotePost should not have 'team_name' field"
+    assert "total" not in posts_response_props, "PostsResponse should not have 'total' field"
+    assert "has_more" not in posts_response_props, "PostsResponse should not have 'has_more' field"

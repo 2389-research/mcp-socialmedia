@@ -59,7 +59,7 @@ def test_no_auth_header():
     """Test that requests without Authorization header are rejected."""
     response = client.get("/v1/teams/demo/posts")
     assert response.status_code == 401
-    assert "Invalid or missing API key" in response.json()["detail"]
+    assert "Invalid or missing API key" in response.json()["detail"]["error"]
 
 
 def test_invalid_auth_header_format():
@@ -82,7 +82,7 @@ def test_invalid_api_key():
     headers = {"Authorization": "Bearer invalid-api-key-12345"}
     response = client.get("/v1/teams/demo/posts", headers=headers)
     assert response.status_code == 401
-    assert "Invalid or missing API key" in response.json()["detail"]
+    assert "Invalid or missing API key" in response.json()["detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -98,8 +98,7 @@ async def test_valid_authentication(setup_auth_test_data):
 
     data = response.json()
     assert "posts" in data
-    assert "total" in data
-    assert "has_more" in data
+    assert "nextOffset" in data
 
 
 @pytest.mark.asyncio
@@ -114,7 +113,7 @@ async def test_cross_team_access_forbidden(setup_auth_test_data):
     headers = {"Authorization": f"Bearer {team1_key}"}
     response = client.get(f"/v1/teams/{team2_name}/posts", headers=headers)
     assert response.status_code == 403
-    assert f"API key does not have access to team '{team2_name}'" in response.json()["detail"]
+    assert f"API key does not have access to team '{team2_name}'" in response.json()["detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -129,7 +128,7 @@ async def test_all_endpoints_require_auth(setup_auth_test_data):
     assert response.status_code == 401
 
     # Create post
-    post_data = {"author_name": "test", "content": "test content"}
+    post_data = {"author": "test", "content": "test content"}
     response = client.post(f"/v1/teams/{team1_name}/posts", json=post_data)
     assert response.status_code == 401
 
@@ -151,7 +150,7 @@ async def test_authenticated_create_post(setup_auth_test_data):
 
     headers = {"Authorization": f"Bearer {team1_key}"}
     post_data = {
-        "author_name": "authenticated-user",
+        "author": "authenticated-user",
         "content": "This post was created with authentication",
         "tags": ["auth", "test"],
     }
@@ -160,8 +159,7 @@ async def test_authenticated_create_post(setup_auth_test_data):
     assert response.status_code == 201
 
     data = response.json()
-    assert data["post"]["author_name"] == "authenticated-user"
-    assert data["post"]["team_name"] == team1_name
+    assert data["author"] == "authenticated-user"
 
 
 @pytest.mark.asyncio
@@ -177,8 +175,7 @@ async def test_authenticated_get_post(setup_auth_test_data):
     assert response.status_code == 200
 
     data = response.json()
-    assert data["post"]["id"] == post_id
-    assert data["post"]["team_name"] == team1_name
+    assert data["postId"] == post_id
 
 
 @pytest.mark.asyncio
@@ -209,12 +206,12 @@ async def test_team_isolation(setup_auth_test_data):
 
     # Create post in team1
     team1_headers = {"Authorization": f"Bearer {team1_key}"}
-    post_data = {"author_name": "team1-user", "content": "Team 1 exclusive content"}
+    post_data = {"author": "team1-user", "content": "Team 1 exclusive content"}
     create_response = client.post(
         f"/v1/teams/{team1_name}/posts", json=post_data, headers=team1_headers
     )
     assert create_response.status_code == 201
-    post_id = create_response.json()["post"]["id"]
+    post_id = create_response.json()["postId"]
 
     # Team2 should not see team1's posts
     team2_headers = {"Authorization": f"Bearer {team2_key}"}
@@ -222,7 +219,7 @@ async def test_team_isolation(setup_auth_test_data):
     # List posts - should be empty for team2
     list_response = client.get(f"/v1/teams/{team2_name}/posts", headers=team2_headers)
     assert list_response.status_code == 200
-    assert list_response.json()["total"] == 0
+    assert len(list_response.json()["posts"]) == 0
 
     # Try to access team1's post via team2 - should fail
     get_response = client.get(f"/v1/teams/{team2_name}/posts/{post_id}", headers=team2_headers)
@@ -255,11 +252,11 @@ async def test_parent_post_validation_with_auth(setup_auth_test_data):
     # Try to create a reply in team2 using team1's post as parent
     team2_headers = {"Authorization": f"Bearer {team2_key}"}
     reply_data = {
-        "author_name": "team2-user",
+        "author": "team2-user",
         "content": "Trying to reply to team1 post",
-        "parent_post_id": post1_id,
+        "parentPostId": post1_id,
     }
 
     response = client.post(f"/v1/teams/{team2_name}/posts", json=reply_data, headers=team2_headers)
     assert response.status_code == 404
-    assert f"Parent post '{post1_id}' not found" in response.json()["detail"]
+    assert f"Parent post '{post1_id}' not found" in response.json()["detail"]["error"]
