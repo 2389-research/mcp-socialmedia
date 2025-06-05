@@ -35,6 +35,10 @@ export class MetricsCollector {
 
     // Set up periodic cleanup of stale operations
     this.cleanupInterval = setInterval(() => this.cleanupStaleOperations(), 60000); // Every minute
+    // Allow process to exit even if interval is active (for tests)
+    if (this.cleanupInterval.unref) {
+      this.cleanupInterval.unref();
+    }
   }
 
   static getInstance(): MetricsCollector {
@@ -195,6 +199,10 @@ export class MetricsCollector {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = setInterval(() => this.cleanupStaleOperations(), 60000);
+      // Allow process to exit even if interval is active (for tests)
+      if (this.cleanupInterval.unref) {
+        this.cleanupInterval.unref();
+      }
     }
   }
 

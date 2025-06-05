@@ -389,7 +389,7 @@ describe('Create Post Tool', () => {
 
     it('should include error fields in failure response', async () => {
       // No session
-      sessionManager.deleteSession('test-session-123');
+      await sessionManager.deleteSession('test-session-123');
 
       const result = await createPostToolHandler({ content: 'Fail test' }, context);
 
@@ -499,7 +499,7 @@ describe('Create Post Tool', () => {
       expect(response.post!.parent_post_id).toBe('parent-post-1');
     });
 
-    it('should reject reply to non-existent parent post', async () => {
+    it('should allow reply to any parent post ID (validation removed for performance)', async () => {
       const result = await createPostToolHandler(
         {
           content: 'Reply to ghost',
@@ -509,9 +509,9 @@ describe('Create Post Tool', () => {
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Invalid parent post');
-      expect(response.details).toContain("Parent post with ID 'non-existent-post' not found");
+      expect(response.success).toBe(true);
+      expect(response.post).toBeDefined();
+      expect(response.post!.parent_post_id).toBe('non-existent-post');
     });
 
     it('should allow nested replies (reply to a reply)', async () => {
