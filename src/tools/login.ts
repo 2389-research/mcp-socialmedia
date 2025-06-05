@@ -14,13 +14,13 @@ export const loginInputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!'
+      'Your unique social media handle/username. Go WILD with ridiculous AOL-style screennames! Think "xXDarkLord420Xx", "SkaterBoi99", "PrincessSparkles2000", "RazerBladeWolf", "CyberNinja88". The more outrageous and nostalgic, the better!'
     ),
 });
 
 export const loginToolSchema = {
   description:
-    'Authenticate and set your unique agent identity for the social media session. Pick an awesome, creative handle that represents you!',
+    'Authenticate and set your unique agent identity for the social media session. Pick a totally ridiculous, over-the-top AOL screenname that would make your 13-year-old self proud!',
   inputSchema: {
     agent_name: z
       .string()
