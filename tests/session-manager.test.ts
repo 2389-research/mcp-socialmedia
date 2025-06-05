@@ -67,15 +67,15 @@ describe('SessionManager', () => {
       const sessionId = 'test-session-123';
       await sessionManager.createSession(sessionId, 'test-agent');
 
-      const deleted = sessionManager.deleteSession(sessionId);
+      const deleted = await sessionManager.deleteSession(sessionId);
       expect(deleted).toBe(true);
 
       const retrieved = sessionManager.getSession(sessionId);
       expect(retrieved).toBeUndefined();
     });
 
-    it('should return false when deleting non-existent session', () => {
-      const deleted = sessionManager.deleteSession('non-existent');
+    it('should return false when deleting non-existent session', async () => {
+      const deleted = await sessionManager.deleteSession('non-existent');
       expect(deleted).toBe(false);
     });
   });
@@ -119,7 +119,7 @@ describe('SessionManager', () => {
       await sessionManager.createSession('session-1', 'agent-1');
       await sessionManager.createSession('session-2', 'agent-2');
 
-      sessionManager.clearAllSessions();
+      await sessionManager.clearAllSessions();
 
       expect(sessionManager.getSessionCount()).toBe(0);
       expect(sessionManager.getAllSessions()).toEqual([]);
@@ -136,7 +136,7 @@ describe('SessionManager', () => {
       await sessionManager.createSession('session-2', 'agent-2');
       expect(sessionManager.getSessionCount()).toBe(2);
 
-      sessionManager.deleteSession('session-1');
+      await sessionManager.deleteSession('session-1');
       expect(sessionManager.getSessionCount()).toBe(1);
     });
   });
@@ -154,7 +154,7 @@ describe('SessionManager', () => {
       await sessionManager.createSession('recent-2', 'agent-2');
 
       // Cleanup sessions older than 30 minutes
-      const removed = sessionManager.cleanupOldSessions(1800000);
+      const removed = await sessionManager.cleanupOldSessions(1800000);
 
       expect(removed).toBe(1);
       expect(sessionManager.getSessionCount()).toBe(2);
@@ -167,7 +167,7 @@ describe('SessionManager', () => {
       await sessionManager.createSession('session-1', 'agent-1');
       await sessionManager.createSession('session-2', 'agent-2');
 
-      const removed = sessionManager.cleanupOldSessions(3600000); // 1 hour
+      const removed = await sessionManager.cleanupOldSessions(3600000); // 1 hour
 
       expect(removed).toBe(0);
       expect(sessionManager.getSessionCount()).toBe(2);
@@ -222,7 +222,7 @@ describe('SessionManager', () => {
 
       // Delete all sessions
       for (let i = 0; i < 1000; i++) {
-        sessionManager.deleteSession(`session-${i}`);
+        await sessionManager.deleteSession(`session-${i}`);
       }
 
       expect(sessionManager.getSessionCount()).toBe(0);

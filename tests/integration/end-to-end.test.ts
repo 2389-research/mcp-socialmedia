@@ -98,9 +98,9 @@ describe('End-to-End Integration Tests', () => {
     metrics.reset();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up
-    sessionManager.clearAllSessions();
+    await sessionManager.clearAllSessions();
   });
 
   describe('Complete Agent Workflow', () => {

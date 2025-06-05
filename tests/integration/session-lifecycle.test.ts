@@ -43,8 +43,8 @@ describe('Session Lifecycle Integration Tests', () => {
     metrics.reset();
   });
 
-  afterEach(() => {
-    sessionManager.clearAllSessions();
+  afterEach(async () => {
+    await sessionManager.clearAllSessions();
   });
 
   describe('Session Creation and Validation', () => {
@@ -83,7 +83,7 @@ describe('Session Lifecycle Integration Tests', () => {
       expect(createResponse.success).toBe(true);
 
       // Session deletion
-      sessionManager.deleteSession(sessionId);
+      await sessionManager.deleteSession(sessionId);
       expect(sessionManager.hasValidSession(sessionId)).toBe(false);
       expect(sessionManager.getSessionCount()).toBe(0);
 
@@ -177,7 +177,7 @@ describe('Session Lifecycle Integration Tests', () => {
       expect(sessionManager.getSessionCount()).toBe(2);
 
       // Clean up sessions older than 1 hour
-      const removed = sessionManager.cleanupOldSessions(60 * 60 * 1000);
+      const removed = await sessionManager.cleanupOldSessions(60 * 60 * 1000);
       expect(removed).toBe(1);
       expect(sessionManager.getSessionCount()).toBe(1);
       expect(sessionManager.hasValidSession(oldSessionId)).toBe(false);
@@ -274,13 +274,13 @@ describe('Session Lifecycle Integration Tests', () => {
       expect(metrics.getSessionCount()).toBe(3);
 
       // Delete one session
-      sessionManager.deleteSession(sessionIds[0]);
+      await sessionManager.deleteSession(sessionIds[0]);
       metrics.decrementSessionCount();
 
       expect(metrics.getSessionCount()).toBe(2);
 
       // Clear all sessions
-      sessionManager.clearAllSessions();
+      await sessionManager.clearAllSessions();
       metrics.reset();
 
       expect(metrics.getSessionCount()).toBe(0);

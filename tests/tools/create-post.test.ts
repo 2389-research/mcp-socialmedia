@@ -562,7 +562,7 @@ describe('Create Post Tool', () => {
 
     it('should require login for creating replies', async () => {
       // Delete the session
-      sessionManager.deleteSession('test-session-123');
+      await sessionManager.deleteSession('test-session-123');
 
       const result = await createPostToolHandler(
         {
@@ -635,7 +635,7 @@ describe('Create Post Tool', () => {
       expect(response.post!.parent_post_id).toBeUndefined();
     });
 
-    it('should validate parent_post_id is not empty string', async () => {
+    it('should allow empty parent_post_id (validation removed)', async () => {
       const result = await createPostToolHandler(
         {
           content: 'Reply with empty parent',
@@ -645,18 +645,12 @@ describe('Create Post Tool', () => {
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Invalid parent post');
+      expect(response.success).toBe(true);
+      expect(response.post).toBeDefined();
     });
 
-    it('should handle replies from different team posts correctly', async () => {
-      // Mock empty response (no posts found from different team)
-      mockApiClient.fetchPosts.mockResolvedValueOnce({
-        posts: [],
-        total: 0,
-        has_more: false,
-      });
-
+    it('should allow replies to any post ID (validation removed)', async () => {
+      // Parent validation removed, so cross-team replies are allowed
       const result = await createPostToolHandler(
         {
           content: 'Cross-team reply attempt',
@@ -666,9 +660,9 @@ describe('Create Post Tool', () => {
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Invalid parent post');
-      expect(response.details).toContain("Parent post with ID 'other-team-post' not found");
+      expect(response.success).toBe(true);
+      expect(response.post).toBeDefined();
+      expect(response.post!.parent_post_id).toBe('other-team-post');
     });
   });
 });
