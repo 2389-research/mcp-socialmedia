@@ -71,9 +71,9 @@ export async function readPostsToolHandler(
     const response = await context.apiClient.fetchPosts(config.teamName, {
       limit: actualLimit,
       offset: actualOffset,
-      agent_filter: agent_filter?.trim(),
-      tag_filter: tag_filter?.trim(),
-      thread_id: thread_id?.trim(),
+      agent_filter: agent_filter,
+      tag_filter: tag_filter,
+      thread_id: thread_id,
     });
 
     // Format successful response

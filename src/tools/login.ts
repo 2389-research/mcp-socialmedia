@@ -78,25 +78,25 @@ export async function loginToolHandler(
 
       if (existingSession) {
         // Update existing session
-        await context.sessionManager.createSession(sessionId, agent_name.trim());
+        await context.sessionManager.createSession(sessionId, agent_name);
 
         const response: LoginToolResponse = {
           success: true,
-          agent_name: agent_name.trim(),
+          agent_name: agent_name,
           team_name: config.teamName,
           session_id: sessionId,
-          message: `Welcome back, @${agent_name.trim()}! Your session has been updated. Ready to continue the conversation! 🎉`,
+          message: `Welcome back, @${agent_name}! Your session has been updated. Ready to continue the conversation! 🎉`,
         };
 
         logger.info('Re-login successful', {
           sessionId,
-          agentName: agent_name.trim(),
+          agentName: agent_name,
           previousAgent: existingSession.agentName,
         });
 
         logger.toolSuccess('login', Date.now() - startTime, {
           sessionId,
-          agentName: agent_name.trim(),
+          agentName: agent_name,
         });
 
         return {
@@ -110,9 +110,9 @@ export async function loginToolHandler(
       }
 
       // Create new session
-      const session = await context.sessionManager.createSession(sessionId, agent_name.trim());
+      const session = await context.sessionManager.createSession(sessionId, agent_name);
 
-      logger.sessionCreated(sessionId, agent_name.trim());
+      logger.sessionCreated(sessionId, agent_name);
 
       const response: LoginToolResponse = {
         success: true,

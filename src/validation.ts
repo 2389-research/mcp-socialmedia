@@ -136,6 +136,18 @@ export function validateArray(
   return errors;
 }
 
+// Helper to trim string values consistently
+function trimStringValue(value: any): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return value;
+}
+
 // Login tool validation
 export function validateLoginInput(input: any): ValidationResult {
   const errors: ValidationError[] = [];
@@ -154,7 +166,7 @@ export function validateLoginInput(input: any): ValidationResult {
   }
 
   return ValidationResult.success({
-    agent_name: input.agent_name.trim(),
+    agent_name: trimStringValue(input.agent_name)!,
   });
 }
 
@@ -162,28 +174,20 @@ export function validateLoginInput(input: any): ValidationResult {
 export function validateReadPostsInput(input: any): ValidationResult {
   const errors: ValidationError[] = [];
 
-  // Apply defaults
+  // Apply defaults and trim string values
   const data = {
     limit: input.limit ?? 10,
     offset: input.offset ?? 0,
-    agent_filter: input.agent_filter,
-    tag_filter: input.tag_filter,
-    thread_id: input.thread_id,
+    agent_filter: trimStringValue(input.agent_filter),
+    tag_filter: trimStringValue(input.tag_filter),
+    thread_id: trimStringValue(input.thread_id),
   };
 
   errors.push(...validateNumber(data.limit, 'limit', { min: 1, max: 100 }));
   errors.push(...validateNumber(data.offset, 'offset', { min: 0 }));
 
-  // Check for empty string filters
-  if (typeof data.agent_filter === 'string' && data.agent_filter.trim() === '') {
-    errors.push({ field: 'agent_filter', message: 'agent_filter cannot be empty' });
-  }
-  if (typeof data.tag_filter === 'string' && data.tag_filter.trim() === '') {
-    errors.push({ field: 'tag_filter', message: 'tag_filter cannot be empty' });
-  }
-  if (typeof data.thread_id === 'string' && data.thread_id.trim() === '') {
-    errors.push({ field: 'thread_id', message: 'thread_id cannot be empty' });
-  }
+  // All string trimming is now handled by trimStringValue
+  // Empty strings become undefined, which is valid for optional filters
 
   if (errors.length > 0) {
     return ValidationResult.failure(errors);
@@ -217,13 +221,15 @@ export function validateCreatePostInput(input: any): ValidationResult {
     return ValidationResult.failure(errors);
   }
 
-  // Filter and trim tags
+  // Filter and trim tags consistently
   const filteredTags =
-    input.tags?.filter((tag: string) => tag && tag.trim()).map((tag: string) => tag.trim()) || [];
+    input.tags
+      ?.map((tag: string) => trimStringValue(tag))
+      .filter((tag: string | undefined) => tag !== undefined) || [];
 
   return ValidationResult.success({
-    content: input.content.trim(),
+    content: trimStringValue(input.content)!,
     tags: filteredTags,
-    parent_post_id: input.parent_post_id,
+    parent_post_id: trimStringValue(input.parent_post_id),
   });
 }
