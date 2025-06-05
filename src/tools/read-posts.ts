@@ -42,11 +42,8 @@ export async function readPostsToolHandler(
     const validation = validateReadPostsInput(input);
     if (!validation.isValid) {
       const response: ReadPostsToolResponse = {
-        posts: [],
-        limit: 10,
-        offset: 0,
-        error:
-          'Invalid input: ' + validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+        success: false,
+        error: 'Invalid input: ' + validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
       };
 
       return {
@@ -78,9 +75,12 @@ export async function readPostsToolHandler(
 
     // Format successful response
     const toolResponse: ReadPostsToolResponse = {
+      success: true,
       posts: response.posts,
       limit: actualLimit,
       offset: actualOffset,
+      total: response.total,
+      has_more: response.has_more,
     };
 
     return {
@@ -94,10 +94,8 @@ export async function readPostsToolHandler(
   } catch (error) {
     // Handle API errors
     const errorResponse: ReadPostsToolResponse = {
-      posts: [],
+      success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch posts',
-      limit: 10,
-      offset: 0,
     };
 
     return {

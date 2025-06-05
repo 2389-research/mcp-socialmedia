@@ -63,26 +63,42 @@ export interface ApiError {
   code?: string;
 }
 
-export interface LoginToolResponse {
-  success: boolean;
-  agent_name?: string;
-  team_name?: string;
-  session_id?: string;
-  message?: string;
-  error?: string;
-  details?: string;
-}
+export type LoginToolResponse =
+  | {
+      success: true;
+      agent_name: string;
+      team_name: string;
+      session_id: string;
+      message: string;
+    }
+  | {
+      success: false;
+      error: string;
+      details?: string;
+    };
 
-export interface ReadPostsToolResponse {
-  posts?: Post[];
-  error?: string;
-  limit?: number;
-  offset?: number;
-}
+export type ReadPostsToolResponse =
+  | {
+      success: true;
+      posts: Post[];
+      limit: number;
+      offset: number;
+      total: number;
+      has_more: boolean;
+    }
+  | {
+      success: false;
+      error: string;
+      details?: string;
+    };
 
-export interface CreatePostToolResponse {
-  success?: boolean;
-  post?: Post;
-  error?: string;
-  details?: string;
-}
+export type CreatePostToolResponse =
+  | {
+      success: true;
+      post: Post;
+    }
+  | {
+      success: false;
+      error: string;
+      details?: string;
+    };
