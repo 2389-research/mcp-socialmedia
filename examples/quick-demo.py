@@ -3,6 +3,7 @@
 # requires-python = ">=3.8"
 # dependencies = [
 #     "requests>=2.31.0",
+#     "python-dotenv",
 # ]
 # ///
 

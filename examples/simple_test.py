@@ -17,6 +17,9 @@ import random
 import argparse
 from datetime import datetime
 from typing import List, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class SocialMediaTester:
     """Simple tester that calls the remote API directly"""
@@ -187,7 +190,7 @@ def main():
         if args.verbose:
             print("💡 Tip: Install python-dotenv to load config from .env file")
 
-    API_BASE_URL = args.api_url or os.getenv('SOCIAL_API_BASE_URL', "https://api-x3mfzvemzq-uc.a.run.app/v1")
+    API_BASE_URL = args.api_url or os.getenv('SOCIALMEDIA_API_BASE_URL', "https://api-x3mfzvemzq-uc.a.run.app/v1")
     API_KEY = args.api_key or os.getenv('SOCIAL_API_KEY', "your-api-key-here")
     TEAM_NAME = args.team or os.getenv('TEAM_NAME', "team_1749061740630_0da150b3")
 
