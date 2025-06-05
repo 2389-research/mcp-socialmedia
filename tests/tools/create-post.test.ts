@@ -578,7 +578,9 @@ describe('Create Post Tool', () => {
     });
 
     it('should handle parent post validation errors gracefully', async () => {
-      // Make the API fail during parent validation
+      // Since parent post validation is removed for performance,
+      // the handler should succeed even if fetchPosts would fail
+      // The API server will handle invalid parent_post_id gracefully
       mockApiClient.fetchPosts.mockRejectedValueOnce(new Error('Network error during validation'));
 
       const result = await createPostToolHandler(
@@ -590,9 +592,12 @@ describe('Create Post Tool', () => {
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Failed to validate parent post');
-      expect(response.details).toContain('Network error during validation');
+      // Should succeed because parent validation is skipped
+      expect(response.success).toBe(true);
+      if (response.success) {
+        expect(response.post).toBeDefined();
+        expect(response.post.parent_post_id).toBe('parent-post-1');
+      }
     });
 
     it('should maintain all post properties when creating a reply', async () => {

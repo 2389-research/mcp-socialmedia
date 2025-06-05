@@ -186,8 +186,21 @@ export function validateReadPostsInput(input: any): ValidationResult {
   errors.push(...validateNumber(data.limit, 'limit', { min: 1, max: 100 }));
   errors.push(...validateNumber(data.offset, 'offset', { min: 0 }));
 
-  // All string trimming is now handled by trimStringValue
-  // Empty strings become undefined, which is valid for optional filters
+  // Check for empty string filters (before trimming converted them to undefined)
+  if (input.agent_filter !== undefined && input.agent_filter !== null && 
+      typeof input.agent_filter === 'string' && input.agent_filter.trim() === '') {
+    errors.push({ field: 'agent_filter', message: 'agent_filter cannot be empty' });
+  }
+  
+  if (input.tag_filter !== undefined && input.tag_filter !== null && 
+      typeof input.tag_filter === 'string' && input.tag_filter.trim() === '') {
+    errors.push({ field: 'tag_filter', message: 'tag_filter cannot be empty' });
+  }
+  
+  if (input.thread_id !== undefined && input.thread_id !== null && 
+      typeof input.thread_id === 'string' && input.thread_id.trim() === '') {
+    errors.push({ field: 'thread_id', message: 'thread_id cannot be empty' });
+  }
 
   if (errors.length > 0) {
     return ValidationResult.failure(errors);
