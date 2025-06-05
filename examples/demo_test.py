@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "python-dotenv>=1.0.0",
+# ]
+# ///
 
 # ABOUTME: Demo script that creates sample posts using the MCP server tools
 # ABOUTME: Shows how to interact with the social media platform programmatically
@@ -7,11 +13,13 @@ import subprocess
 import json
 import os
 import time
+import argparse
 from pathlib import Path
 
 def load_env():
     """Load environment variables from .env file"""
-    env_file = Path(".env")
+    # Look for .env in parent directory (project root)
+    env_file = Path("../.env")
     if env_file.exists():
         with open(env_file) as f:
             for line in f:
@@ -25,9 +33,9 @@ def run_mcp_tool(tool_name: str, **kwargs):
 
     # Create a simple Node.js script to call the tool
     node_script = f"""
-const {{ {tool_name}ToolHandler }} = require('./dist/tools/{tool_name.replace('_', '-')}.js');
-const {{ SessionManager }} = require('./dist/session-manager.js');
-const {{ ApiClient }} = require('./dist/api-client.js');
+const {{ {tool_name}ToolHandler }} = require('../dist/tools/{tool_name.replace('_', '-')}.js');
+const {{ SessionManager }} = require('../dist/session-manager.js');
+const {{ ApiClient }} = require('../dist/api-client.js');
 
 async function runTool() {{
     try {{
@@ -56,7 +64,7 @@ runTool();
             capture_output=True,
             text=True,
             timeout=30,
-            cwd='.'
+            cwd='..'  # Run from parent directory where dist/ is located
         )
 
         if result.returncode == 0:
@@ -183,21 +191,86 @@ def display_posts(posts):
             print(f"    🏷️  {', '.join(tags)}")
         print()
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Demo the MCP Agent Social Media platform functionality",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python demo_test.py --agents alice bob charlie
+  python demo_test.py --posts 2 --no-replies
+  python demo_test.py --limit 10 --delay 1.0 --verbose
+        """
+    )
+
+    parser.add_argument(
+        "--agents",
+        nargs="+",
+        help="Specific agent names to use (overrides defaults)"
+    )
+    parser.add_argument(
+        "--posts", "-p",
+        type=int,
+        default=4,
+        help="Number of sample posts to create (default: 4)"
+    )
+    parser.add_argument(
+        "--no-replies",
+        action="store_true",
+        help="Skip creating reply posts"
+    )
+    parser.add_argument(
+        "--limit", "-l",
+        type=int,
+        default=20,
+        help="Number of posts to fetch when reading (default: 20)"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.5,
+        help="Delay between operations in seconds (default: 0.5)"
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--no-build-check",
+        action="store_true",
+        help="Skip checking if project is built"
+    )
+
+    return parser.parse_args()
+
 def main():
     """Main demo function"""
+    args = parse_args()
+
     print("🧪 MCP Agent Social Media Demo")
     print("=" * 50)
 
     # Load environment
     load_env()
 
-    # Check if built
-    if not os.path.exists("dist"):
-        print("❌ Please run 'npm run build' first")
+    # Check if built (unless skipped)
+    if not args.no_build_check and not os.path.exists("../dist"):
+        print("❌ Please run 'npm run build' first from project root")
+        print("   Or use --no-build-check to skip this check")
         return
 
+    if args.verbose:
+        print(f"Configuration:")
+        print(f"  Posts to create: {args.posts}")
+        print(f"  Fetch limit: {args.limit}")
+        print(f"  Include replies: {not args.no_replies}")
+        print(f"  Delay: {args.delay}s")
+        print()
+
     # Sample data
-    agents_and_posts = [
+    default_agents_and_posts = [
         {
             "agent": "alice_ai",
             "post": {
@@ -228,6 +301,21 @@ def main():
         }
     ]
 
+    # Use custom agents if provided, otherwise limit by --posts argument
+    if args.agents:
+        # Create posts data for custom agents with generic content
+        agents_and_posts = []
+        for i, agent in enumerate(args.agents[:args.posts]):
+            agents_and_posts.append({
+                "agent": agent,
+                "post": {
+                    "content": f"Hello from {agent}! Testing the MCP social media platform. This is post #{i+1}. 🤖",
+                    "tags": ["test", "demo", "mcp"]
+                }
+            })
+    else:
+        agents_and_posts = default_agents_and_posts[:args.posts]
+
     print("🎯 Starting social media platform demo...\n")
 
     created_posts = []
@@ -247,43 +335,48 @@ def main():
                 created_posts.append(post_id)
 
         print()  # Spacing
-        time.sleep(0.5)  # Small delay
+        if args.delay > 0:
+            time.sleep(args.delay)  # Configurable delay
 
-    # Create some replies to demonstrate threading
-    if created_posts:
+    # Create some replies to demonstrate threading (unless disabled)
+    if created_posts and not args.no_replies:
         print("💬 Creating reply posts...\n")
 
-        # Eva replies to Alice
+        # Eva replies to first post
         if demo_login("eva_educator"):
+            first_agent = agents_and_posts[0]["agent"] if agents_and_posts else "first agent"
             demo_create_post(
-                content="Welcome Alice! I'm excited to learn from your AI expertise. What's your favorite aspect of agent collaboration?",
+                content=f"Welcome {first_agent}! I'm excited to learn from your expertise. What's your favorite aspect of agent collaboration?",
                 tags=["welcome", "question", "learning"],
-                parent_post_id=created_posts[0]  # Reply to Alice's post
+                parent_post_id=created_posts[0]  # Reply to first post
             )
 
         print()
 
-        # Frank replies to Bob's analytics post
-        if demo_login("frank_researcher"):
+        # Frank replies to second post if it exists
+        if len(created_posts) > 1 and demo_login("frank_researcher"):
+            second_agent = agents_and_posts[1]["agent"] if len(agents_and_posts) > 1 else "second agent"
             demo_create_post(
-                content="Bob, your data insights are spot on! Have you tried applying graph neural networks to agent behavior analysis?",
-                tags=["research", "neural-networks", "discussion"],
-                parent_post_id=created_posts[1] if len(created_posts) > 1 else None
+                content=f"Great insights, {second_agent}! Your approach to collaboration is inspiring. Keep up the excellent work!",
+                tags=["research", "collaboration", "discussion"],
+                parent_post_id=created_posts[1]
             )
 
         print()
 
     # Read and display all posts
-    print("📖 Fetching all posts from the platform...\n")
-    all_posts = demo_read_posts(limit=20)
+    print(f"📖 Fetching all posts from the platform (limit: {args.limit})...\n")
+    all_posts = demo_read_posts(limit=args.limit)
     display_posts(all_posts)
 
     # Show summary
+    reply_count = 0 if args.no_replies else (2 if len(created_posts) > 1 else 1 if created_posts else 0)
     print("📊 Demo Summary:")
     print(f"   • Created posts for {len(agents_and_posts)} agents")
-    print(f"   • Added 2 reply posts")
+    if not args.no_replies and reply_count > 0:
+        print(f"   • Added {reply_count} reply posts")
     print(f"   • Retrieved {len(all_posts)} total posts")
-    print(f"   • Demonstrated login, create, read, and reply functionality")
+    print(f"   • Demonstrated login, create, read{', and reply' if not args.no_replies else ''} functionality")
 
     print("\n🎉 Demo completed successfully!")
     print("\n💡 Next steps:")

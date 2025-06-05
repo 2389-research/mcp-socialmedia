@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.8"
+# dependencies = []
+# ///
 
 # ABOUTME: Test script that demonstrates MCP tools usage via subprocess
 # ABOUTME: Uses the built MCP server to create and read posts
@@ -7,6 +11,7 @@ import subprocess
 import json
 import time
 import sys
+import argparse
 from typing import Dict, Any, List
 
 def run_mcp_tool(tool_name: str, **kwargs) -> Dict[str, Any]:
@@ -15,10 +20,10 @@ def run_mcp_tool(tool_name: str, **kwargs) -> Dict[str, Any]:
         # Create the tool call
         cmd = [
             "node", "-e", f"""
-const {{ {tool_name}ToolHandler }} = require('./dist/tools/{tool_name.replace('_', '-')}.js');
-const {{ SessionManager }} = require('./dist/session-manager.js');
-const {{ ApiClient }} = require('./dist/api-client.js');
-const {{ config }} = require('./dist/config.js');
+const {{ {tool_name}ToolHandler }} = require('../dist/tools/{tool_name.replace('_', '-')}.js');
+const {{ SessionManager }} = require('../dist/session-manager.js');
+const {{ ApiClient }} = require('../dist/api-client.js');
+const {{ config }} = require('../dist/config.js');
 
 const sessionManager = new SessionManager();
 const apiClient = new ApiClient();
@@ -40,7 +45,7 @@ const args = {json.dumps(kwargs)};
 """
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd='..')
 
         if result.returncode == 0:
             return json.loads(result.stdout.strip())
@@ -125,21 +130,87 @@ def test_read_posts(limit: int = 10) -> List[Dict[str, Any]]:
     print(f"❌ Unexpected read posts response: {result}")
     return []
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Test MCP Social Media Tools via subprocess calls",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python mcp_test.py --agents alice bob charlie
+  python mcp_test.py --posts 2 --no-replies
+  python mcp_test.py --limit 10 --delay 1.0 --verbose
+        """
+    )
+
+    parser.add_argument(
+        "--agents",
+        nargs="+",
+        help="Specific agent names to use (overrides defaults)"
+    )
+    parser.add_argument(
+        "--posts", "-p",
+        type=int,
+        default=3,
+        help="Number of sample posts to create (default: 3)"
+    )
+    parser.add_argument(
+        "--no-replies",
+        action="store_true",
+        help="Skip creating reply posts"
+    )
+    parser.add_argument(
+        "--limit", "-l",
+        type=int,
+        default=20,
+        help="Number of posts to fetch when reading (default: 20)"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=1.0,
+        help="Delay between operations in seconds (default: 1.0)"
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--no-build-check",
+        action="store_true",
+        help="Skip checking if project is built"
+    )
+
+    return parser.parse_args()
+
 def main():
     """Main test function"""
+    args = parse_args()
+
     print("🧪 MCP Social Media Tools Test")
     print("=" * 40)
 
-    # Check if dist directory exists
+    # Check if dist directory exists (unless skipped)
     import os
-    if not os.path.exists("dist"):
-        print("❌ dist directory not found. Please run 'npm run build' first.")
+    if not args.no_build_check and not os.path.exists("../dist"):
+        print("❌ dist directory not found. Please run 'npm run build' first from project root.")
+        print("   Or use --no-build-check to skip this check")
         sys.exit(1)
 
-    # Sample test data
-    test_agents = ["alice_ai", "bob_bot", "charlie_code"]
+    if args.verbose:
+        print(f"Configuration:")
+        print(f"  Posts to create: {args.posts}")
+        print(f"  Fetch limit: {args.limit}")
+        print(f"  Include replies: {not args.no_replies}")
+        print(f"  Delay: {args.delay}s")
+        print()
 
-    sample_posts = [
+    # Sample test data
+    default_test_agents = ["alice_ai", "bob_bot", "charlie_code"]
+    test_agents = args.agents[:args.posts] if args.agents else default_test_agents[:args.posts]
+
+    default_sample_posts = [
         {
             "content": "Hello from Alice! Testing the MCP social media tools. 🤖",
             "tags": ["test", "introduction", "mcp"]
@@ -153,6 +224,17 @@ def main():
             "tags": ["typescript", "development", "praise"]
         }
     ]
+
+    # Create custom posts if using custom agents
+    if args.agents:
+        sample_posts = []
+        for i, agent in enumerate(test_agents):
+            sample_posts.append({
+                "content": f"Hello from {agent}! Testing the MCP social media tools. Post #{i+1}. 🤖",
+                "tags": ["test", "mcp", "demo"]
+            })
+    else:
+        sample_posts = default_sample_posts[:args.posts]
 
     created_post_ids = []
 
@@ -173,11 +255,12 @@ def main():
                 if post_id:
                     created_post_ids.append(post_id)
 
-            time.sleep(1)  # Small delay between operations
+            if args.delay > 0:
+                time.sleep(args.delay)  # Configurable delay between operations
 
         # Test reading posts
-        print(f"\n📖 Reading all posts...")
-        posts = test_read_posts(limit=20)
+        print(f"\n📖 Reading all posts (limit: {args.limit})...")
+        posts = test_read_posts(limit=args.limit)
 
         if posts:
             print(f"\n📋 Feed Summary ({len(posts)} posts):")
@@ -194,12 +277,13 @@ def main():
                     print(f"    🏷️  Tags: {tags}")
                 print()
 
-        # Test creating a reply if we have posts
-        if created_post_ids:
+        # Test creating a reply if we have posts (unless disabled)
+        if created_post_ids and not args.no_replies:
             print("💬 Testing reply functionality...")
             if test_login("diana_dev"):
+                first_agent = test_agents[0] if test_agents else "first agent"
                 reply_id = test_create_post(
-                    content="Great to see everyone testing the platform! This is Diana replying to the conversation. 👋",
+                    content=f"Great to see {first_agent} testing the platform! This is Diana replying to the conversation. 👋",
                     tags=["reply", "test", "community"],
                     parent_post_id=created_post_ids[0]
                 )

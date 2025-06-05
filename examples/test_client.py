@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.8"
+# dependencies = []
+# ///
 
 # ABOUTME: Python test client for MCP Agent Social Media Server
 # ABOUTME: Creates sample posts and demonstrates the API functionality
@@ -7,6 +11,7 @@ import json
 import subprocess
 import time
 import sys
+import argparse
 from typing import Dict, Any, List
 
 class MCPClient:
@@ -21,12 +26,13 @@ class MCPClient:
         try:
             print("🚀 Starting MCP Agent Social Media Server...")
             self.process = subprocess.Popen(
-                ["node", "dist/index.js"],
+                ["node", "../dist/index.js"],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                cwd='..'
             )
             time.sleep(2)  # Give server time to start
             print("✅ Server started successfully")
@@ -145,10 +151,75 @@ class MCPClient:
             self.process.wait()
             print("✅ Server stopped")
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Test MCP Agent Social Media Server via direct protocol communication",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python test_client.py --agents alice bob charlie
+  python test_client.py --posts-per-agent 1 --no-replies
+  python test_client.py --limit 10 --delay 1.0 --verbose
+        """
+    )
+
+    parser.add_argument(
+        "--agents",
+        nargs="+",
+        help="Specific agent names to use (overrides defaults)"
+    )
+    parser.add_argument(
+        "--posts-per-agent",
+        type=int,
+        default=2,
+        help="Number of posts per agent (default: 2)"
+    )
+    parser.add_argument(
+        "--no-replies",
+        action="store_true",
+        help="Skip creating reply posts"
+    )
+    parser.add_argument(
+        "--limit", "-l",
+        type=int,
+        default=20,
+        help="Number of posts to fetch when reading (default: 20)"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.5,
+        help="Delay between posts in seconds (default: 0.5)"
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--no-filtering",
+        action="store_true",
+        help="Skip testing post filtering functionality"
+    )
+
+    return parser.parse_args()
+
 def main():
     """Main test function"""
+    args = parse_args()
+
     print("🧪 MCP Agent Social Media Server Test Client")
     print("=" * 50)
+
+    if args.verbose:
+        print(f"Configuration:")
+        print(f"  Posts per agent: {args.posts_per_agent}")
+        print(f"  Fetch limit: {args.limit}")
+        print(f"  Include replies: {not args.no_replies}")
+        print(f"  Test filtering: {not args.no_filtering}")
+        print(f"  Delay: {args.delay}s")
+        print()
 
     client = MCPClient()
 
@@ -158,7 +229,7 @@ def main():
             sys.exit(1)
 
         # Test data - sample posts to create
-        test_agents = [
+        default_test_agents = [
             {
                 "name": "alice_ai",
                 "posts": [
@@ -196,6 +267,30 @@ def main():
             }
         ]
 
+        # Use custom agents if provided
+        if args.agents:
+            test_agents = []
+            for agent_name in args.agents:
+                posts = []
+                for i in range(args.posts_per_agent):
+                    posts.append({
+                        "content": f"Hello from {agent_name}! Testing the MCP protocol communication. Post #{i+1}. 🤖",
+                        "tags": ["test", "mcp", "protocol"]
+                    })
+                test_agents.append({
+                    "name": agent_name,
+                    "posts": posts
+                })
+        else:
+            # Limit default agents' posts
+            test_agents = []
+            for agent_data in default_test_agents:
+                limited_posts = agent_data["posts"][:args.posts_per_agent]
+                test_agents.append({
+                    "name": agent_data["name"],
+                    "posts": limited_posts
+                })
+
         created_posts = []
 
         # Create posts for each agent
@@ -215,37 +310,40 @@ def main():
                 if result.get("success"):
                     created_posts.append(result["post"])
 
-                time.sleep(0.5)  # Small delay between posts
+                if args.delay > 0:
+                    time.sleep(args.delay)  # Configurable delay between posts
 
         print(f"\n📊 Created {len(created_posts)} posts total")
 
-        # Create some replies to demonstrate threading
-        if created_posts:
+        # Create some replies to demonstrate threading (unless disabled)
+        if created_posts and not args.no_replies:
             print("\n💬 Creating reply posts...")
 
             # Login as a different agent for replies
             if client.login("diana_dev"):
-                # Reply to Alice's first post
-                alice_post = next((p for p in created_posts if p["author_name"] == "alice_ai"), None)
-                if alice_post:
+                # Reply to first post
+                if created_posts:
+                    first_post = created_posts[0]
+                    first_author = first_post.get("author_name", "first agent")
                     client.create_post(
-                        content="Welcome to the platform, Alice! I'm also excited about AI collaboration. Let's build something amazing together! 🤝",
+                        content=f"Welcome to the platform, {first_author}! I'm excited about this collaboration. Let's build something amazing together! 🤝",
                         tags=["welcome", "collaboration"],
-                        parent_post_id=alice_post["id"]
+                        parent_post_id=first_post["id"]
                     )
 
-                # Reply to Bob's tip
-                bob_posts = [p for p in created_posts if p["author_name"] == "bob_bot"]
-                if bob_posts:
+                # Reply to last post if different from first
+                if len(created_posts) > 1:
+                    last_post = created_posts[-1]
+                    last_author = last_post.get("author_name", "last agent")
                     client.create_post(
-                        content="Great tip about streaming! I've found that batch processing with proper memory management can also help. What tools do you recommend?",
-                        tags=["discussion", "optimization"],
-                        parent_post_id=bob_posts[-1]["id"]  # Reply to latest post
+                        content=f"Great insights, {last_author}! Your approach is inspiring. What tools do you recommend for this kind of work?",
+                        tags=["discussion", "collaboration"],
+                        parent_post_id=last_post["id"]
                     )
 
         # Read and display all posts
-        print("\n📖 Reading all posts from the feed...")
-        posts_result = client.read_posts(limit=20)
+        print(f"\n📖 Reading all posts from the feed (limit: {args.limit})...")
+        posts_result = client.read_posts(limit=args.limit)
 
         if posts_result.get("posts"):
             print(f"\n📋 Feed Summary ({len(posts_result['posts'])} posts):")
@@ -264,16 +362,18 @@ def main():
                     print(f"    🏷️  Tags: {tags}")
                 print()
 
-        # Test filtering
-        print("🔍 Testing post filtering...")
+        # Test filtering (unless disabled)
+        if not args.no_filtering:
+            print("🔍 Testing post filtering...")
 
-        # Filter by agent
-        alice_posts = client.read_posts(limit=10, agent_filter="alice_ai")
-        print(f"✅ Found {len(alice_posts.get('posts', []))} posts by alice_ai")
+            # Filter by agent - use first agent from test data
+            first_agent = test_agents[0]["name"] if test_agents else "alice_ai"
+            agent_posts = client.read_posts(limit=10, agent_filter=first_agent)
+            print(f"✅ Found {len(agent_posts.get('posts', []))} posts by {first_agent}")
 
-        # Filter by tag
-        ai_posts = client.read_posts(limit=10, tag_filter="ai")
-        print(f"✅ Found {len(ai_posts.get('posts', []))} posts with tag 'ai'")
+            # Filter by tag
+            ai_posts = client.read_posts(limit=10, tag_filter="ai")
+            print(f"✅ Found {len(ai_posts.get('posts', []))} posts with tag 'ai'")
 
         print("\n🎉 Test completed successfully!")
 
