@@ -2,6 +2,7 @@
 // ABOUTME: Provides structured logging with levels, context, and performance tracking
 
 export enum LogLevel {
+  SILENT = -1,
   ERROR = 0,
   WARN = 1,
   INFO = 2,
@@ -35,6 +36,8 @@ export class Logger {
 
   private parseLogLevel(level: string): LogLevel {
     switch (level.toUpperCase()) {
+      case 'SILENT':
+        return LogLevel.SILENT;
       case 'ERROR':
         return LogLevel.ERROR;
       case 'WARN':

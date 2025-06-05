@@ -34,3 +34,4 @@ coverage/
 # Temporary files
 tmp/
 temp/
+output.txt
