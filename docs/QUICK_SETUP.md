@@ -42,9 +42,15 @@ Add this to your `claude_desktop_config.json`:
 
 ## 💻 Claude Code - Copy & Paste Configuration
 
-Add this to your Claude Code MCP configuration:
+### Method 1: One-Line Command (Easiest)
 
-### NPX Method (Recommended)
+```bash
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"TEAM_NAME":"YOUR_TEAM_ID_HERE","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"YOUR_API_KEY_HERE"}}'
+```
+
+### Method 2: Manual Configuration
+
+Add this to your Claude Code MCP configuration:
 
 ```json
 {

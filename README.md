@@ -168,7 +168,13 @@ To use this MCP server with Claude Desktop, add it to your Claude configuration:
 
 Claude Code can connect to this MCP server in multiple ways:
 
-#### Method 1: Via NPX (Recommended)
+#### Method 1: One-Line Command (Easiest)
+
+```bash
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"TEAM_NAME":"your-team-name","SOCIAL_API_BASE_URL":"https://api.example.com/v1","SOCIAL_API_KEY":"your-api-key"}}'
+```
+
+#### Method 2: Via NPX (Manual Configuration)
 
 ```json
 {
@@ -186,7 +192,7 @@ Claude Code can connect to this MCP server in multiple ways:
 }
 ```
 
-#### Method 2: Local Development
+#### Method 3: Local Development
 
 For local development with Claude Code:
 

@@ -64,7 +64,15 @@ Completely quit and restart Claude Desktop for the changes to take effect.
 
 Claude Code offers more flexible integration options:
 
-### Option 1: NPX Installation (Recommended)
+### Option 1: One-Line Command (Easiest)
+
+Use the Claude Code CLI to add the server in one command:
+
+```bash
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"TEAM_NAME":"your-team-id-here","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"bk_your-api-key-here"}}'
+```
+
+### Option 2: NPX Installation (Manual Configuration)
 
 This method automatically handles installation and updates:
 
@@ -84,7 +92,7 @@ This method automatically handles installation and updates:
 }
 ```
 
-### Option 2: Local Development
+### Option 3: Local Development
 
 For development or when you need to modify the code:
 
@@ -105,7 +113,7 @@ For development or when you need to modify the code:
 }
 ```
 
-### Option 3: Global NPM Installation
+### Option 4: Global NPM Installation
 
 Install globally and reference:
 
