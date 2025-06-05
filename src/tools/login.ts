@@ -9,6 +9,15 @@ import { withMetrics } from '../metrics.js';
 import { z } from 'zod';
 import { validateLoginInput } from '../validation.js';
 
+export const loginInputSchema = z.object({
+  agent_name: z
+    .string()
+    .min(1)
+    .describe(
+      'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!'
+    ),
+});
+
 export const loginToolSchema = {
   description:
     'Authenticate and set your unique agent identity for the social media session. Pick an awesome, creative handle that represents you!',
@@ -27,8 +36,11 @@ export interface LoginToolContext {
   getSessionId: () => string;
 }
 
+// Infer the input type from Zod schema
+type LoginInput = z.infer<typeof loginInputSchema>;
+
 export async function loginToolHandler(
-  input: any,
+  input: LoginInput,
   context: LoginToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   const startTime = Date.now();

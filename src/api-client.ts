@@ -7,6 +7,7 @@ import fetch, { RequestInit, Response } from 'node-fetch';
 export type FetchFunction = typeof fetch;
 import { PostData, PostResponse, PostsResponse, PostQueryOptions } from './types.js';
 import { config } from './config.js';
+import { logger } from './logger.js';
 
 export interface IApiClient {
   fetchPosts(teamName: string, options?: PostQueryOptions): Promise<PostsResponse>;
@@ -29,6 +30,12 @@ export class ApiClient implements IApiClient {
     this.apiKey = apiKey;
     this.timeout = timeout;
     this.fetchFn = fetchFn;
+
+    logger.debug('ApiClient initialized', {
+      baseUrl: this.baseUrl,
+      timeout: this.timeout,
+      hasApiKey: !!this.apiKey,
+    });
   }
 
   /**
@@ -58,6 +65,12 @@ export class ApiClient implements IApiClient {
     const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts${
       queryString ? `?${queryString}` : ''
     }`;
+
+    logger.debug('Fetching posts', {
+      teamName,
+      queryParams: Object.fromEntries(params),
+      url,
+    });
 
     const response = await this.makeRequest('GET', url);
     const remoteResponse = response as any;
@@ -89,6 +102,13 @@ export class ApiClient implements IApiClient {
    */
   async createPost(teamName: string, postData: PostData): Promise<PostResponse> {
     const url = `${this.baseUrl}/teams/${encodeURIComponent(teamName)}/posts`;
+
+    logger.debug('Creating post', {
+      teamName,
+      url,
+      hasContent: !!postData.content,
+      tagsCount: postData.tags?.length || 0,
+    });
 
     // Adapt to remote API schema - use 'author' instead of 'author_name'
     const remotePostData = {
@@ -125,6 +145,7 @@ export class ApiClient implements IApiClient {
   private async makeRequest(method: string, url: string, body?: unknown): Promise<unknown> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const startTime = Date.now();
 
     try {
       const options: RequestInit = {
@@ -141,18 +162,43 @@ export class ApiClient implements IApiClient {
         options.body = JSON.stringify(body);
       }
 
+      logger.apiRequest(method, url, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          hasApiKey: !!this.apiKey,
+        },
+        hasBody: !!body,
+        timeout: this.timeout,
+      });
+
       const response = await this.fetchFn(url, options);
+      const duration = Date.now() - startTime;
 
       if (!response.ok) {
+        logger.apiResponse(method, url, response.status, duration, {
+          statusText: response.statusText,
+          failed: true,
+        });
         throw await this.handleErrorResponse(response);
       }
 
+      logger.apiResponse(method, url, response.status, duration);
       const data = await response.json();
       return data;
     } catch (error) {
+      const duration = Date.now() - startTime;
       if (error instanceof Error && error.name === 'AbortError') {
+        logger.apiError(method, url, new Error(`Request timeout after ${this.timeout}ms`), {
+          duration,
+          timeout: true,
+        });
         throw new Error(`Request timeout after ${this.timeout}ms`);
       }
+      logger.apiError(method, url, error instanceof Error ? error : new Error(String(error)), {
+        duration,
+        errorType: error instanceof Error ? error.name : 'unknown',
+      });
       throw error;
     } finally {
       clearTimeout(timeoutId);

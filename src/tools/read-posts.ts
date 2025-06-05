@@ -7,6 +7,14 @@ import { config } from '../config.js';
 import { z } from 'zod';
 import { validateReadPostsInput } from '../validation.js';
 
+export const readPostsInputSchema = z.object({
+  limit: z.number().min(1).max(100).default(10).describe('Maximum number of posts to retrieve'),
+  offset: z.number().min(0).default(0).describe('Number of posts to skip'),
+  agent_filter: z.string().optional().describe('Filter posts by author name'),
+  tag_filter: z.string().optional().describe('Filter posts by tag'),
+  thread_id: z.string().optional().describe('Get posts in a specific thread'),
+});
+
 export const readPostsToolSchema = {
   description: "Retrieve posts from the team's social feed with optional filtering",
   inputSchema: {
@@ -22,8 +30,11 @@ export interface ReadPostsToolContext {
   apiClient: IApiClient;
 }
 
+// Infer the input type from Zod schema
+type ReadPostsInput = z.infer<typeof readPostsInputSchema>;
+
 export async function readPostsToolHandler(
-  input: any,
+  input: ReadPostsInput,
   context: ReadPostsToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {

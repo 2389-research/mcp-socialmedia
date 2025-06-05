@@ -6,9 +6,19 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { config, validateConfig } from './config.js';
 import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
-import { loginToolSchema, loginToolHandler } from './tools/login.js';
-import { readPostsToolSchema, readPostsToolHandler } from './tools/read-posts.js';
-import { createPostToolSchema, createPostToolHandler } from './tools/create-post.js';
+import { loginToolSchema, loginToolHandler, loginInputSchema } from './tools/login.js';
+import {
+  readPostsToolSchema,
+  readPostsToolHandler,
+  readPostsInputSchema,
+} from './tools/read-posts.js';
+import {
+  createPostToolSchema,
+  createPostToolHandler,
+  createPostInputSchema,
+} from './tools/create-post.js';
+import { z } from 'zod';
+import { logger } from './logger.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -23,6 +33,7 @@ const apiClient = new ApiClient();
 
 // Store cleanup interval globally for shutdown
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+let keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
 // Register the login tool
 server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
@@ -32,7 +43,7 @@ server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
     getSessionId: () => 'global-session',
   };
 
-  return loginToolHandler(args, toolContext);
+  return loginToolHandler(args as z.infer<typeof loginInputSchema>, toolContext);
 });
 
 // Register the read_posts tool
@@ -42,7 +53,7 @@ server.registerTool('read_posts', readPostsToolSchema, async (args, _mcpContext)
     apiClient,
   };
 
-  return readPostsToolHandler(args, toolContext);
+  return readPostsToolHandler(args as z.infer<typeof readPostsInputSchema>, toolContext);
 });
 
 // Register the create_post tool
@@ -54,54 +65,128 @@ server.registerTool('create_post', createPostToolSchema, async (args, _mcpContex
     getSessionId: () => 'global-session',
   };
 
-  return createPostToolHandler(args, toolContext);
+  return createPostToolHandler(args as z.infer<typeof createPostInputSchema>, toolContext);
 });
 
 async function main() {
   try {
-    validateConfig();
-    console.error(`Starting MCP server for team: ${config.teamName}`);
-    console.error(`API endpoint: ${config.socialApiBaseUrl}`);
+    // Log startup information
+    logger.info('MCP Server starting', {
+      nodeVersion: process.version,
+      platform: process.platform,
+      pid: process.pid,
+      logLevel: process.env.LOG_LEVEL || 'INFO',
+    });
 
+    validateConfig();
+
+    // Log configuration (without sensitive data)
+    logger.info(`Starting MCP server for team: ${config.teamName}`);
+    logger.debug('Configuration loaded', {
+      baseUrl: config.socialApiBaseUrl,
+      teamName: config.teamName,
+      timeout: config.apiTimeout,
+      logLevel: config.logLevel,
+    });
+
+    logger.debug('Initializing stdio transport');
     const transport = new StdioServerTransport();
+
+    // Connect to transport
+    logger.debug('Connecting server to transport');
     await server.connect(transport);
-    console.error('MCP Agent Social Server running...');
+    logger.info('Server connected successfully');
+
+    // The transport itself doesn't expose error handlers, but we can handle stdio events
+    process.stdin.on('error', (error) => {
+      logger.error('Stdin error', { error: error.message, stack: error.stack });
+      shutdown('STDIN_ERROR');
+    });
+
+    process.stdout.on('error', (error) => {
+      logger.error('Stdout error', { error: error.message, stack: error.stack });
+      shutdown('STDOUT_ERROR');
+    });
+
+    process.stdin.on('close', () => {
+      logger.warn('Stdin closed unexpectedly');
+      shutdown('STDIN_CLOSE');
+    });
+
+    process.stdin.on('end', () => {
+      logger.warn('Stdin ended');
+      shutdown('STDIN_END');
+    });
+    logger.info('MCP Agent Social Server running', {
+      toolsCount: 3,
+      transport: 'stdio',
+    });
 
     // Set up graceful shutdown
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+    // Handle uncaught errors to prevent sudden crashes
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+      shutdown('UNCAUGHT_EXCEPTION');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled rejection', { reason, promise });
+      shutdown('UNHANDLED_REJECTION');
+    });
+
     // Set up periodic session cleanup (every 30 minutes)
     cleanupInterval = setInterval(() => {
       const removed = sessionManager.cleanupOldSessions(3600000); // 1 hour
       if (removed > 0) {
-        console.error(`Cleaned up ${removed} old sessions`);
+        logger.info(`Cleaned up ${removed} old sessions`);
       }
     }, 1800000); // 30 minutes
+
+    // Set up keepalive to prevent connection timeout
+    keepAliveInterval = setInterval(() => {
+      logger.debug('Keepalive ping', { uptime: process.uptime() });
+    }, 30000); // Every 30 seconds
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     process.exit(1);
   }
 }
 
 async function shutdown(signal: string) {
-  console.error(`\nReceived ${signal}, shutting down gracefully...`);
+  logger.warn(`Received ${signal}, shutting down gracefully...`);
 
-  // Clear cleanup interval
+  // Clear intervals
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
+  }
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
   }
 
   // Clean up sessions
   const sessionCount = sessionManager.getSessionCount();
   if (sessionCount > 0) {
-    console.error(`Cleaning up ${sessionCount} active sessions...`);
+    logger.info(`Cleaning up ${sessionCount} active sessions...`);
     sessionManager.clearAllSessions();
   }
 
   // Close server
-  await server.close();
-  process.exit(0);
+  try {
+    await server.close();
+    logger.info('Server closed successfully');
+  } catch (error) {
+    logger.error('Error closing server', { error });
+  }
+
+  // Exit with appropriate code
+  const exitCode = signal === 'UNCAUGHT_EXCEPTION' || signal === 'UNHANDLED_REJECTION' ? 1 : 0;
+  process.exit(exitCode);
 }
 
 main().catch((error) => {

@@ -8,6 +8,12 @@ import { config } from '../config.js';
 import { z } from 'zod';
 import { validateCreatePostInput } from '../validation.js';
 
+export const createPostInputSchema = z.object({
+  content: z.string().min(1).describe('The content of the post'),
+  tags: z.array(z.string()).optional().describe('Optional tags for the post'),
+  parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
+});
+
 export const createPostToolSchema = {
   description: 'Create a new post or reply within the team',
   inputSchema: {
@@ -23,8 +29,11 @@ export interface CreatePostToolContext {
   getSessionId: () => string;
 }
 
+// Infer the input type from Zod schema
+type CreatePostInput = z.infer<typeof createPostInputSchema>;
+
 export async function createPostToolHandler(
-  input: any,
+  input: CreatePostInput,
   context: CreatePostToolContext
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {
