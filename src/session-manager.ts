@@ -13,20 +13,35 @@ export class SessionManager {
   }
 
   /**
+   * Acquires a lock for session operations
+   */
+  private async acquireLock(): Promise<() => void> {
+    const currentLock = this.sessionLock;
+    let releaseLock: () => void;
+    this.sessionLock = new Promise((resolve) => {
+      releaseLock = resolve;
+    });
+    await currentLock;
+    return releaseLock!;
+  }
+
+  /**
    * Creates a new session or updates an existing one
    */
   async createSession(sessionId: string, agentName: string): Promise<Session> {
-    // Ensure thread-safe operations
-    await this.sessionLock;
-
-    const session: Session = {
-      sessionId,
-      agentName,
-      loginTimestamp: new Date(),
-    };
-
-    this.sessions.set(sessionId, session);
-    return session;
+    // Implement actual locking
+    const releaseLock = await this.acquireLock();
+    try {
+      const session: Session = {
+        sessionId,
+        agentName,
+        loginTimestamp: new Date(),
+      };
+      this.sessions.set(sessionId, session);
+      return session;
+    } finally {
+      releaseLock();
+    }
   }
 
   /**
@@ -39,8 +54,13 @@ export class SessionManager {
   /**
    * Deletes a session by ID
    */
-  deleteSession(sessionId: string): boolean {
-    return this.sessions.delete(sessionId);
+  async deleteSession(sessionId: string): Promise<boolean> {
+    const releaseLock = await this.acquireLock();
+    try {
+      return this.sessions.delete(sessionId);
+    } finally {
+      releaseLock();
+    }
   }
 
   /**
@@ -60,8 +80,13 @@ export class SessionManager {
   /**
    * Clears all sessions
    */
-  clearAllSessions(): void {
-    this.sessions.clear();
+  async clearAllSessions(): Promise<void> {
+    const releaseLock = await this.acquireLock();
+    try {
+      this.sessions.clear();
+    } finally {
+      releaseLock();
+    }
   }
 
   /**
@@ -74,18 +99,23 @@ export class SessionManager {
   /**
    * Cleans up sessions older than the specified age in milliseconds
    */
-  cleanupOldSessions(maxAgeMs: number): number {
-    const now = new Date();
-    let removedCount = 0;
+  async cleanupOldSessions(maxAgeMs: number): Promise<number> {
+    const releaseLock = await this.acquireLock();
+    try {
+      const now = new Date();
+      let removedCount = 0;
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      const age = now.getTime() - session.loginTimestamp.getTime();
-      if (age > maxAgeMs) {
-        this.sessions.delete(sessionId);
-        removedCount++;
+      for (const [sessionId, session] of this.sessions.entries()) {
+        const age = now.getTime() - session.loginTimestamp.getTime();
+        if (age > maxAgeMs) {
+          this.sessions.delete(sessionId);
+          removedCount++;
+        }
       }
-    }
 
-    return removedCount;
+      return removedCount;
+    } finally {
+      releaseLock();
+    }
   }
 }

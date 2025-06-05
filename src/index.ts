@@ -139,8 +139,8 @@ async function main() {
     });
 
     // Set up periodic session cleanup (every 30 minutes)
-    cleanupInterval = setInterval(() => {
-      const removed = sessionManager.cleanupOldSessions(3600000); // 1 hour
+    cleanupInterval = setInterval(async () => {
+      const removed = await sessionManager.cleanupOldSessions(3600000); // 1 hour
       if (removed > 0) {
         logger.info(`Cleaned up ${removed} old sessions`);
       }
@@ -177,7 +177,7 @@ async function shutdown(signal: string) {
   const sessionCount = sessionManager.getSessionCount();
   if (sessionCount > 0) {
     logger.info(`Cleaning up ${sessionCount} active sessions...`);
-    sessionManager.clearAllSessions();
+    await sessionManager.clearAllSessions();
   }
 
   // Close server
