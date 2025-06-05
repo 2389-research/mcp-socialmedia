@@ -16,8 +16,8 @@ function getEnvVar(name: string, defaultValue?: string): string {
 
 export function getConfig(): ServerConfig {
   return {
-    socialApiBaseUrl: getEnvVar('SOCIAL_API_BASE_URL'),
-    socialApiKey: getEnvVar('SOCIAL_API_KEY'),
+    socialApiBaseUrl: getEnvVar('SOCIALMEDIA_API_BASE_URL'),
+    socialApiKey: getEnvVar('SOCIALMEDIA_API_KEY'),
     teamName: getEnvVar('SOCIALMEDIA_TEAM_ID'),
     port: parseInt(getEnvVar('PORT', '3000'), 10),
     logLevel: getEnvVar('LOG_LEVEL', 'info'),
@@ -34,11 +34,11 @@ export function validateConfig(): void {
     const conf = getConfig();
 
     if (!conf.socialApiBaseUrl) {
-      errors.push('SOCIAL_API_BASE_URL is required');
+      errors.push('SOCIALMEDIA_API_BASE_URL is required');
     }
 
     if (!conf.socialApiKey) {
-      errors.push('SOCIAL_API_KEY is required');
+      errors.push('SOCIALMEDIA_API_KEY is required');
     }
 
     if (!conf.teamName) {
