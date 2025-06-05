@@ -19,6 +19,7 @@ import {
 } from './tools/create-post.js';
 import { z } from 'zod';
 import { logger } from './logger.js';
+import { metrics } from './metrics.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',
@@ -168,6 +169,9 @@ async function shutdown(signal: string) {
   if (keepAliveInterval) {
     clearInterval(keepAliveInterval);
   }
+
+  // Shutdown metrics collector
+  metrics.shutdown();
 
   // Clean up sessions
   const sessionCount = sessionManager.getSessionCount();

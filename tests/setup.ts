@@ -8,3 +8,11 @@ process.env.SOCIAL_API_KEY = process.env.SOCIAL_API_KEY || 'test-api-key';
 process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'silent'; // Suppress logs during tests to reduce noise
 process.env.API_TIMEOUT = process.env.API_TIMEOUT || '5000';
 process.env.PORT = process.env.PORT || '3001'; // Use different port for tests
+
+// Clean up metrics collector on process exit (for test environments)
+if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+  process.on('exit', () => {
+    const { metrics } = require('../src/metrics.js');
+    metrics.shutdown();
+  });
+}

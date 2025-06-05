@@ -24,12 +24,17 @@ export class MetricsCollector {
   private startTime: number;
   private sessionCount: number;
   private activeOperations: Map<string, number>;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly OPERATION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {
     this.metrics = new Map();
     this.startTime = Date.now();
     this.sessionCount = 0;
     this.activeOperations = new Map();
+
+    // Set up periodic cleanup of stale operations
+    this.cleanupInterval = setInterval(() => this.cleanupStaleOperations(), 60000); // Every minute
   }
 
   static getInstance(): MetricsCollector {
@@ -61,8 +66,32 @@ export class MetricsCollector {
     this.recordOperation(operationName, duration, success);
   }
 
+  // Cleanup stale operations that have been running too long
+  private cleanupStaleOperations(): void {
+    const now = Date.now();
+    const staleOperations: string[] = [];
+
+    for (const [id, startTime] of this.activeOperations.entries()) {
+      if (now - startTime > this.OPERATION_TIMEOUT) {
+        staleOperations.push(id);
+      }
+    }
+
+    // Remove stale operations and record them as timed out
+    for (const id of staleOperations) {
+      this.activeOperations.delete(id);
+      const operationName = id.split('_')[0];
+      this.recordOperation(operationName, this.OPERATION_TIMEOUT, false, 'timeout');
+    }
+  }
+
   // Record an operation metric
-  private recordOperation(name: string, duration: number, success: boolean): void {
+  private recordOperation(
+    name: string,
+    duration: number,
+    success: boolean,
+    _reason?: string
+  ): void {
     let metrics = this.metrics.get(name);
     if (!metrics) {
       metrics = {
@@ -161,6 +190,20 @@ export class MetricsCollector {
     this.metrics.clear();
     this.activeOperations.clear();
     this.sessionCount = 0;
+
+    // Clear the cleanup interval when resetting
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = setInterval(() => this.cleanupStaleOperations(), 60000);
+    }
+  }
+
+  // Shutdown the metrics collector (for cleanup)
+  shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 }
 
