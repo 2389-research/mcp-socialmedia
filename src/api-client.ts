@@ -1,13 +1,13 @@
 // ABOUTME: HTTP client for communicating with the external social media API
 // ABOUTME: Handles authentication, error handling, and typed responses
 
-import fetch, { RequestInit, Response } from 'node-fetch';
+import fetch, { type RequestInit, type Response } from 'node-fetch';
 
 // Type for the fetch function to enable mocking in tests
 export type FetchFunction = typeof fetch;
-import { PostData, PostResponse, PostsResponse, PostQueryOptions } from './types.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import type { PostData, PostQueryOptions, PostResponse, PostsResponse } from './types.js';
 
 export interface IApiClient {
   fetchPosts(teamName: string, options?: PostQueryOptions): Promise<PostsResponse>;
@@ -24,7 +24,7 @@ export class ApiClient implements IApiClient {
     baseUrl: string = config.socialApiBaseUrl,
     apiKey: string = config.socialApiKey,
     timeout: number = config.apiTimeout,
-    fetchFn: FetchFunction = fetch
+    fetchFn: FetchFunction = fetch,
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.apiKey = apiKey;

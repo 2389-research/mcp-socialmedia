@@ -1,12 +1,12 @@
 // ABOUTME: Login tool implementation for agent authentication
 // ABOUTME: Handles session creation and validation for agents
 
-import { SessionManager } from '../session-manager.js';
-import { LoginToolResponse } from '../types.js';
+import { z } from 'zod';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { withMetrics } from '../metrics.js';
-import { z } from 'zod';
+import type { SessionManager } from '../session-manager.js';
+import type { LoginToolResponse } from '../types.js';
 import { validateLoginInput } from '../validation.js';
 
 export const loginInputSchema = z.object({
@@ -14,7 +14,7 @@ export const loginInputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your unique social media handle/username. Go WILD with ridiculous AOL-style screennames! Think "xXDarkLord420Xx", "SkaterBoi99", "PrincessSparkles2000", "RazerBladeWolf", "CyberNinja88". The more outrageous and nostalgic, the better!'
+      'Your unique social media handle/username. Go WILD with ridiculous AOL-style screennames! Think "xXDarkLord420Xx", "SkaterBoi99", "PrincessSparkles2000", "RazerBladeWolf", "CyberNinja88". The more outrageous and nostalgic, the better!',
     ),
 });
 
@@ -26,7 +26,7 @@ export const loginToolSchema = {
       .string()
       .min(1)
       .describe(
-        'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!'
+        'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!',
       ),
   },
 };
@@ -41,7 +41,7 @@ type LoginInput = z.infer<typeof loginInputSchema>;
 
 export async function loginToolHandler(
   input: LoginInput,
-  context: LoginToolContext
+  context: LoginToolContext,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   const startTime = Date.now();
   const sessionId = context.getSessionId();

@@ -56,7 +56,7 @@ export class MetricsCollector {
   }
 
   // End tracking an operation
-  endOperation(operationId: string, success: boolean = true): void {
+  endOperation(operationId: string, success = true): void {
     const startTime = this.activeOperations.get(operationId);
     if (!startTime) {
       return;
@@ -94,14 +94,14 @@ export class MetricsCollector {
     name: string,
     duration: number,
     success: boolean,
-    _reason?: string
+    _reason?: string,
   ): void {
     let metrics = this.metrics.get(name);
     if (!metrics) {
       metrics = {
         count: 0,
         totalDuration: 0,
-        minDuration: Infinity,
+        minDuration: Number.POSITIVE_INFINITY,
         maxDuration: 0,
         averageDuration: 0,
         lastDuration: 0,
@@ -169,14 +169,14 @@ export class MetricsCollector {
     const system = this.getSystemMetrics();
     const operations = this.getAllMetrics();
 
-    let summary = `=== System Metrics ===\n`;
+    let summary = '=== System Metrics ===\n';
     summary += `Uptime: ${system.uptime}s\n`;
     summary += `Memory (RSS): ${Math.round(system.memoryUsage.rss / 1024 / 1024)}MB\n`;
     summary += `Memory (Heap Used): ${Math.round(system.memoryUsage.heapUsed / 1024 / 1024)}MB\n`;
     summary += `Active Sessions: ${system.sessionCount}\n`;
     summary += `Active Operations: ${system.activeOperations}\n\n`;
 
-    summary += `=== Operation Metrics ===\n`;
+    summary += '=== Operation Metrics ===\n';
     Object.entries(operations).forEach(([name, metrics]) => {
       summary += `${name}:\n`;
       summary += `  Count: ${metrics.count}\n`;
@@ -221,7 +221,7 @@ export const metrics = MetricsCollector.getInstance();
 // Helper function for timing async operations
 export async function withMetrics<T>(
   operationName: string,
-  operation: () => Promise<T>
+  operation: () => Promise<T>,
 ): Promise<T> {
   const operationId = metrics.startOperation(operationName);
   try {

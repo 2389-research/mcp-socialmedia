@@ -146,7 +146,7 @@ export class Logger {
     url: string,
     status: number,
     duration: number,
-    context?: LogContext
+    context?: LogContext,
   ): void {
     const logMethod = status >= 400 ? this.warn.bind(this) : this.debug.bind(this);
 

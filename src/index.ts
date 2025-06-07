@@ -3,23 +3,23 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { config, validateConfig } from './config.js';
-import { SessionManager } from './session-manager.js';
+import type { z } from 'zod';
 import { ApiClient } from './api-client.js';
-import { loginToolSchema, loginToolHandler, loginInputSchema } from './tools/login.js';
-import {
-  readPostsToolSchema,
-  readPostsToolHandler,
-  readPostsInputSchema,
-} from './tools/read-posts.js';
-import {
-  createPostToolSchema,
-  createPostToolHandler,
-  createPostInputSchema,
-} from './tools/create-post.js';
-import { z } from 'zod';
+import { config, validateConfig } from './config.js';
 import { logger } from './logger.js';
 import { metrics } from './metrics.js';
+import { SessionManager } from './session-manager.js';
+import {
+  type createPostInputSchema,
+  createPostToolHandler,
+  createPostToolSchema,
+} from './tools/create-post.js';
+import { type loginInputSchema, loginToolHandler, loginToolSchema } from './tools/login.js';
+import {
+  type readPostsInputSchema,
+  readPostsToolHandler,
+  readPostsToolSchema,
+} from './tools/read-posts.js';
 
 const server = new McpServer({
   name: 'mcp-agent-social',

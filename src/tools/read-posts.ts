@@ -1,10 +1,10 @@
 // ABOUTME: Read posts tool implementation for retrieving social media posts
 // ABOUTME: Handles basic pagination and error handling for post retrieval
 
-import { IApiClient } from '../api-client.js';
-import { ReadPostsToolResponse } from '../types.js';
-import { config } from '../config.js';
 import { z } from 'zod';
+import type { IApiClient } from '../api-client.js';
+import { config } from '../config.js';
+import type { ReadPostsToolResponse } from '../types.js';
 import { validateReadPostsInput } from '../validation.js';
 
 export const readPostsInputSchema = z.object({
@@ -35,7 +35,7 @@ type ReadPostsInput = z.infer<typeof readPostsInputSchema>;
 
 export async function readPostsToolHandler(
   input: ReadPostsInput,
-  context: ReadPostsToolContext
+  context: ReadPostsToolContext,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {
     // Validate input
@@ -43,7 +43,7 @@ export async function readPostsToolHandler(
     if (!validation.isValid) {
       const response: ReadPostsToolResponse = {
         success: false,
-        error: 'Invalid input: ' + validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+        error: `Invalid input: ${validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ')}`,
       };
 
       return {

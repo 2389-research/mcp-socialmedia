@@ -10,7 +10,7 @@ export class ValidationResult {
   constructor(
     public isValid: boolean,
     public errors: ValidationError[] = [],
-    public data?: any
+    public data?: any,
   ) {}
 
   static success(data: any): ValidationResult {
@@ -25,7 +25,7 @@ export class ValidationResult {
 export function validateString(
   value: any,
   field: string,
-  options: { minLength?: number; maxLength?: number; required?: boolean } = {}
+  options: { minLength?: number; maxLength?: number; required?: boolean } = {},
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -72,7 +72,7 @@ export function validateString(
 export function validateNumber(
   value: any,
   field: string,
-  options: { min?: number; max?: number; required?: boolean } = {}
+  options: { min?: number; max?: number; required?: boolean } = {},
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -82,7 +82,7 @@ export function validateNumber(
   }
 
   if (value !== undefined && value !== null) {
-    if (typeof value !== 'number' || isNaN(value)) {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
       errors.push({ field, message: `${field} must be a number` });
       return errors;
     }
@@ -105,7 +105,7 @@ export function validateArray(
   options: {
     required?: boolean;
     itemValidator?: (item: any, index: number) => ValidationError[];
-  } = {}
+  } = {},
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -122,13 +122,15 @@ export function validateArray(
 
     if (options.itemValidator) {
       value.forEach((item, index) => {
-        const itemErrors = options.itemValidator!(item, index);
-        errors.push(
-          ...itemErrors.map((err) => ({
-            field: `${field}[${index}].${err.field}`,
-            message: err.message,
-          }))
-        );
+        const itemErrors = options.itemValidator?.(item, index);
+        if (itemErrors) {
+          errors.push(
+            ...itemErrors.map((err) => ({
+              field: `${field}[${index}].${err.field}`,
+              message: err.message,
+            })),
+          );
+        }
       });
     }
   }
@@ -187,18 +189,30 @@ export function validateReadPostsInput(input: any): ValidationResult {
   errors.push(...validateNumber(data.offset, 'offset', { min: 0 }));
 
   // Check for empty string filters (before trimming converted them to undefined)
-  if (input.agent_filter !== undefined && input.agent_filter !== null && 
-      typeof input.agent_filter === 'string' && input.agent_filter.trim() === '') {
+  if (
+    input.agent_filter !== undefined &&
+    input.agent_filter !== null &&
+    typeof input.agent_filter === 'string' &&
+    input.agent_filter.trim() === ''
+  ) {
     errors.push({ field: 'agent_filter', message: 'agent_filter cannot be empty' });
   }
-  
-  if (input.tag_filter !== undefined && input.tag_filter !== null && 
-      typeof input.tag_filter === 'string' && input.tag_filter.trim() === '') {
+
+  if (
+    input.tag_filter !== undefined &&
+    input.tag_filter !== null &&
+    typeof input.tag_filter === 'string' &&
+    input.tag_filter.trim() === ''
+  ) {
     errors.push({ field: 'tag_filter', message: 'tag_filter cannot be empty' });
   }
-  
-  if (input.thread_id !== undefined && input.thread_id !== null && 
-      typeof input.thread_id === 'string' && input.thread_id.trim() === '') {
+
+  if (
+    input.thread_id !== undefined &&
+    input.thread_id !== null &&
+    typeof input.thread_id === 'string' &&
+    input.thread_id.trim() === ''
+  ) {
     errors.push({ field: 'thread_id', message: 'thread_id cannot be empty' });
   }
 
@@ -217,7 +231,7 @@ export function validateCreatePostInput(input: any): ValidationResult {
     ...validateString(input.content, 'content', {
       required: true,
       minLength: 1,
-    })
+    }),
   );
 
   errors.push(...validateString(input.parent_post_id, 'parent_post_id'));
@@ -226,7 +240,7 @@ export function validateCreatePostInput(input: any): ValidationResult {
     errors.push(
       ...validateArray(input.tags, 'tags', {
         itemValidator: (item, _index) => validateString(item, 'item', {}),
-      })
+      }),
     );
   }
 

@@ -1,7 +1,7 @@
 // ABOUTME: Session management for tracking logged-in agents per connection
 // ABOUTME: Provides in-memory storage and utilities for session handling
 
-import { Session } from './types.js';
+import type { Session } from './types.js';
 
 export class SessionManager {
   private sessions: Map<string, Session>;

@@ -2,7 +2,7 @@
 // ABOUTME: Loads and validates environment variables
 
 import { config as loadDotenv } from 'dotenv';
-import { ServerConfig } from './types.js';
+import type { ServerConfig } from './types.js';
 
 loadDotenv();
 
@@ -19,9 +19,9 @@ export function getConfig(): ServerConfig {
     socialApiBaseUrl: getEnvVar('SOCIALMEDIA_API_BASE_URL'),
     socialApiKey: getEnvVar('SOCIALMEDIA_API_KEY'),
     teamName: getEnvVar('SOCIALMEDIA_TEAM_ID'),
-    port: parseInt(getEnvVar('PORT', '3000'), 10),
+    port: Number.parseInt(getEnvVar('PORT', '3000'), 10),
     logLevel: getEnvVar('LOG_LEVEL', 'info'),
-    apiTimeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10), // 30 seconds default
+    apiTimeout: Number.parseInt(getEnvVar('API_TIMEOUT', '30000'), 10), // 30 seconds default
   };
 }
 
@@ -45,7 +45,7 @@ export function validateConfig(): void {
       errors.push('SOCIALMEDIA_TEAM_ID is required');
     }
 
-    if (isNaN(conf.port) || conf.port < 1 || conf.port > 65535) {
+    if (Number.isNaN(conf.port) || conf.port < 1 || conf.port > 65535) {
       errors.push('PORT must be a valid port number (1-65535)');
     }
   } catch (error) {

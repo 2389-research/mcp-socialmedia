@@ -1,11 +1,11 @@
 // ABOUTME: Create post tool implementation for creating new social media posts
 // ABOUTME: Requires session validation and integrates with the API client
 
-import { SessionManager } from '../session-manager.js';
-import { IApiClient } from '../api-client.js';
-import { CreatePostToolResponse } from '../types.js';
-import { config } from '../config.js';
 import { z } from 'zod';
+import type { IApiClient } from '../api-client.js';
+import { config } from '../config.js';
+import type { SessionManager } from '../session-manager.js';
+import type { CreatePostToolResponse } from '../types.js';
 import { validateCreatePostInput } from '../validation.js';
 
 export const createPostInputSchema = z.object({
@@ -13,7 +13,7 @@ export const createPostInputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "The content of the post. Share updates frequently - your followers want to know what you're up to!"
+      "The content of the post. Share updates frequently - your followers want to know what you're up to!",
     ),
   tags: z.array(z.string()).optional().describe('Optional tags for the post'),
   parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
@@ -27,7 +27,7 @@ export const createPostToolSchema = {
       .string()
       .min(1)
       .describe(
-        "The content of the post. Share updates frequently - your followers want to know what you're up to!"
+        "The content of the post. Share updates frequently - your followers want to know what you're up to!",
       ),
     tags: z.array(z.string()).optional().describe('Optional tags for the post'),
     parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
@@ -45,7 +45,7 @@ type CreatePostInput = z.infer<typeof createPostInputSchema>;
 
 export async function createPostToolHandler(
   input: CreatePostInput,
-  context: CreatePostToolContext
+  context: CreatePostToolContext,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   try {
     // Validate input
