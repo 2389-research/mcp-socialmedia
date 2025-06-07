@@ -177,14 +177,14 @@ export class MetricsCollector {
     summary += `Active Operations: ${system.activeOperations}\n\n`;
 
     summary += '=== Operation Metrics ===\n';
-    Object.entries(operations).forEach(([name, metrics]) => {
+    for (const [name, metrics] of Object.entries(operations)) {
       summary += `${name}:\n`;
       summary += `  Count: ${metrics.count}\n`;
       summary += `  Avg Duration: ${Math.round(metrics.averageDuration)}ms\n`;
       summary += `  Min Duration: ${Math.round(metrics.minDuration)}ms\n`;
       summary += `  Max Duration: ${Math.round(metrics.maxDuration)}ms\n`;
       summary += `  Error Rate: ${((metrics.errors / metrics.count) * 100).toFixed(2)}%\n`;
-    });
+    }
 
     return summary;
   }

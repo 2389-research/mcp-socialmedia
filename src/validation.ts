@@ -6,24 +6,24 @@ export interface ValidationError {
   message: string;
 }
 
-export class ValidationResult {
+export class ValidationResult<T = unknown> {
   constructor(
     public isValid: boolean,
     public errors: ValidationError[] = [],
-    public data?: any,
+    public data?: T,
   ) {}
 
-  static success(data: any): ValidationResult {
-    return new ValidationResult(true, [], data);
+  static success<T>(data: T): ValidationResult<T> {
+    return new ValidationResult<T>(true, [], data);
   }
 
-  static failure(errors: ValidationError[]): ValidationResult {
-    return new ValidationResult(false, errors);
+  static failure<T = never>(errors: ValidationError[]): ValidationResult<T> {
+    return new ValidationResult<T>(false, errors);
   }
 }
 
 export function validateString(
-  value: any,
+  value: unknown,
   field: string,
   options: { minLength?: number; maxLength?: number; required?: boolean } = {},
 ): ValidationError[] {
@@ -70,7 +70,7 @@ export function validateString(
 }
 
 export function validateNumber(
-  value: any,
+  value: unknown,
   field: string,
   options: { min?: number; max?: number; required?: boolean } = {},
 ): ValidationError[] {
@@ -99,12 +99,12 @@ export function validateNumber(
   return errors;
 }
 
-export function validateArray(
-  value: any,
+export function validateArray<T = unknown>(
+  value: unknown,
   field: string,
   options: {
     required?: boolean;
-    itemValidator?: (item: any, index: number) => ValidationError[];
+    itemValidator?: (item: T, index: number) => ValidationError[];
   } = {},
 ): ValidationError[] {
   const errors: ValidationError[] = [];
@@ -121,7 +121,7 @@ export function validateArray(
     }
 
     if (options.itemValidator) {
-      value.forEach((item, index) => {
+      (value as T[]).forEach((item, index) => {
         const itemErrors = options.itemValidator?.(item, index);
         if (itemErrors) {
           errors.push(
@@ -139,7 +139,7 @@ export function validateArray(
 }
 
 // Helper to trim string values consistently
-function trimStringValue(value: any): string | undefined {
+function trimStringValue(value: unknown): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -147,11 +147,30 @@ function trimStringValue(value: any): string | undefined {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   }
-  return value;
+  return String(value);
+}
+
+// Input types for validation
+interface LoginInput {
+  agent_name?: unknown;
+}
+
+interface ReadPostsInput {
+  limit?: unknown;
+  offset?: unknown;
+  agent_filter?: unknown;
+  tag_filter?: unknown;
+  thread_id?: unknown;
+}
+
+interface CreatePostInput {
+  content?: unknown;
+  tags?: unknown;
+  parent_post_id?: unknown;
 }
 
 // Login tool validation
-export function validateLoginInput(input: any): ValidationResult {
+export function validateLoginInput(input: LoginInput): ValidationResult<{ agent_name: string }> {
   const errors: ValidationError[] = [];
 
   // Special handling for agent_name
@@ -167,19 +186,46 @@ export function validateLoginInput(input: any): ValidationResult {
     return ValidationResult.failure(errors);
   }
 
+  const agentName = trimStringValue(input.agent_name);
+  if (!agentName) {
+    return ValidationResult.failure([
+      { field: 'agent_name', message: 'Agent name cannot be empty' },
+    ]);
+  }
+
   return ValidationResult.success({
-    agent_name: trimStringValue(input.agent_name)!,
+    agent_name: agentName,
   });
 }
 
 // Read posts tool validation
-export function validateReadPostsInput(input: any): ValidationResult {
+export function validateReadPostsInput(input: ReadPostsInput): ValidationResult<{
+  limit: number;
+  offset: number;
+  agent_filter?: string;
+  tag_filter?: string;
+  thread_id?: string;
+}> {
   const errors: ValidationError[] = [];
+
+  // Parse and validate numeric values
+  const limit =
+    typeof input.limit === 'number'
+      ? input.limit
+      : typeof input.limit === 'string'
+        ? Number.parseInt(input.limit, 10)
+        : 10;
+  const offset =
+    typeof input.offset === 'number'
+      ? input.offset
+      : typeof input.offset === 'string'
+        ? Number.parseInt(input.offset, 10)
+        : 0;
 
   // Apply defaults and trim string values
   const data = {
-    limit: input.limit ?? 10,
-    offset: input.offset ?? 0,
+    limit: Number.isNaN(limit) ? 10 : limit,
+    offset: Number.isNaN(offset) ? 0 : offset,
     agent_filter: trimStringValue(input.agent_filter),
     tag_filter: trimStringValue(input.tag_filter),
     thread_id: trimStringValue(input.thread_id),
@@ -224,7 +270,11 @@ export function validateReadPostsInput(input: any): ValidationResult {
 }
 
 // Create post tool validation
-export function validateCreatePostInput(input: any): ValidationResult {
+export function validateCreatePostInput(input: CreatePostInput): ValidationResult<{
+  content: string;
+  tags: string[];
+  parent_post_id?: string;
+}> {
   const errors: ValidationError[] = [];
 
   errors.push(
@@ -249,13 +299,18 @@ export function validateCreatePostInput(input: any): ValidationResult {
   }
 
   // Filter and trim tags consistently
-  const filteredTags =
-    input.tags
-      ?.map((tag: string) => trimStringValue(tag))
-      .filter((tag: string | undefined) => tag !== undefined) || [];
+  const rawTags = Array.isArray(input.tags) ? input.tags : [];
+  const filteredTags = rawTags
+    .map((tag) => trimStringValue(tag))
+    .filter((tag): tag is string => tag !== undefined);
+
+  const content = trimStringValue(input.content);
+  if (!content) {
+    return ValidationResult.failure([{ field: 'content', message: 'Content cannot be empty' }]);
+  }
 
   return ValidationResult.success({
-    content: trimStringValue(input.content)!,
+    content,
     tags: filteredTags,
     parent_post_id: trimStringValue(input.parent_post_id),
   });

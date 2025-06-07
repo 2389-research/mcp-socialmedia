@@ -11,7 +11,7 @@ function getEnvVar(name: string, defaultValue?: string): string {
   if (!value && !defaultValue) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
-  return value || defaultValue!;
+  return value || defaultValue || '';
 }
 
 export function getConfig(): ServerConfig {

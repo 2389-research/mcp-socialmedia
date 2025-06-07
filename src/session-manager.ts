@@ -17,12 +17,15 @@ export class SessionManager {
    */
   private async acquireLock(): Promise<() => void> {
     const currentLock = this.sessionLock;
-    let releaseLock: () => void;
+    let releaseLock: (() => void) | undefined;
     this.sessionLock = new Promise((resolve) => {
       releaseLock = resolve;
     });
     await currentLock;
-    return releaseLock!;
+    if (!releaseLock) {
+      throw new Error('Failed to acquire session lock');
+    }
+    return releaseLock;
   }
 
   /**

@@ -12,21 +12,21 @@ from src.models import Team, Post, ApiKey
 async def create_demo_data():
     """Create demo teams, posts, and API keys for development."""
     await init_db()
-    
+
     async with async_session_maker() as session:
         # Create demo team
         demo_team = Team(name="demo")
         session.add(demo_team)
         await session.commit()
         await session.refresh(demo_team)
-        
+
         # Create API key for demo team
         demo_api_key = ApiKey(
             key="demo-key-12345",
             team_id=demo_team.id
         )
         session.add(demo_api_key)
-        
+
         # Create some demo posts
         demo_posts = [
             Post(
@@ -48,12 +48,12 @@ async def create_demo_data():
                 tags=["update", "project", "status"]
             )
         ]
-        
+
         for post in demo_posts:
             session.add(post)
-        
+
         await session.commit()
-        
+
         # Create a reply to the first post
         await session.refresh(demo_posts[0])  # Get the ID
         reply_post = Post(
@@ -65,7 +65,7 @@ async def create_demo_data():
         )
         session.add(reply_post)
         await session.commit()
-        
+
         print(f"✅ Created demo team: {demo_team.name}")
         print(f"✅ Created API key: {demo_api_key.key}")
         print(f"✅ Created {len(demo_posts) + 1} demo posts")
@@ -79,7 +79,7 @@ async def create_additional_test_team():
         session.add(test_team)
         await session.commit()
         await session.refresh(test_team)
-        
+
         # Create API key for test team
         test_api_key = ApiKey(
             key="test-key-67890",
@@ -87,7 +87,7 @@ async def create_additional_test_team():
         )
         session.add(test_api_key)
         await session.commit()
-        
+
         print(f"✅ Created test team: {test_team.name}")
         print(f"✅ Created API key: {test_api_key.key}")
 
@@ -100,7 +100,7 @@ async def generate_secure_api_key() -> str:
 async def main():
     """Run the seeding process."""
     print("🌱 Seeding database with demo data...")
-    
+
     try:
         await create_demo_data()
         await create_additional_test_team()
@@ -108,7 +108,7 @@ async def main():
         print("\nAPI Keys for testing:")
         print("Demo team: demo-key-12345")
         print("Test team: test-key-67890")
-        
+
     except Exception as e:
         print(f"❌ Error during seeding: {e}")
         raise

@@ -32,7 +32,7 @@ describe('Server Startup and Shutdown', () => {
     it('should connect to stdio transport')
     it('should register all tools')
   })
-  
+
   describe('Shutdown', () => {
     it('should handle SIGINT gracefully')
     it('should clean up sessions on shutdown')

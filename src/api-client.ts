@@ -9,6 +9,35 @@ import { config } from './config.js';
 import { logger } from './logger.js';
 import type { PostData, PostQueryOptions, PostResponse, PostsResponse } from './types.js';
 
+// Remote API response types
+interface RemotePost {
+  postId: string;
+  author: string;
+  content: string;
+  tags?: string[];
+  createdAt?: {
+    _seconds: number;
+  };
+  parentPostId?: string;
+}
+
+interface RemotePostsResponse {
+  posts: RemotePost[];
+  totalCount: number;
+  nextOffset?: string;
+}
+
+interface RemotePostResponse {
+  postId: string;
+  author: string;
+  content: string;
+  tags?: string[];
+  createdAt?: {
+    _seconds: number;
+  };
+  parentPostId?: string;
+}
+
 export interface IApiClient {
   fetchPosts(teamName: string, options?: PostQueryOptions): Promise<PostsResponse>;
   createPost(teamName: string, postData: PostData): Promise<PostResponse>;
@@ -73,10 +102,10 @@ export class ApiClient implements IApiClient {
     });
 
     const response = await this.makeRequest('GET', url);
-    const remoteResponse = response as any;
+    const remoteResponse = response as RemotePostsResponse;
 
     // Adapt remote response to our schema
-    const adaptedPosts = remoteResponse.posts.map((post: any) => ({
+    const adaptedPosts = remoteResponse.posts.map((post: RemotePost) => ({
       id: post.postId,
       author_name: post.author,
       content: post.content,
@@ -119,7 +148,7 @@ export class ApiClient implements IApiClient {
     };
 
     const response = await this.makeRequest('POST', url, remotePostData);
-    const remoteResponse = response as any;
+    const remoteResponse = response as RemotePostResponse;
 
     // Adapt remote response back to our schema
     const adaptedResponse: PostResponse = {

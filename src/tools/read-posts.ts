@@ -56,6 +56,10 @@ export async function readPostsToolHandler(
       };
     }
 
+    if (!validation.data) {
+      throw new Error('Validation succeeded but data is missing');
+    }
+
     const {
       limit: actualLimit,
       offset: actualOffset,

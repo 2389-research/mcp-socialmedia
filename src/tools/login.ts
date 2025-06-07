@@ -71,6 +71,9 @@ export async function loginToolHandler(
         };
       }
 
+      if (!validation.data) {
+        throw new Error('Validation succeeded but data is missing');
+      }
       const { agent_name } = validation.data;
 
       // Check if session already exists (re-login scenario)

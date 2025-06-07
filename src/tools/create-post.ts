@@ -67,6 +67,10 @@ export async function createPostToolHandler(
       };
     }
 
+    if (!validation.data) {
+      throw new Error('Validation succeeded but data is missing');
+    }
+
     const { content, tags, parent_post_id } = validation.data;
 
     // Note: Empty tags will be filtered out later during processing
