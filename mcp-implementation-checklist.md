@@ -11,18 +11,18 @@ This checklist tracks the implementation of missing MCP features identified in t
 - [x] Update tool descriptions with enhanced details
 - [x] All tools now have proper annotations
 
-## Phase 1: Resources (2-3 days) - HIGH PRIORITY 🔥
-- [ ] Implement `resources/list` endpoint
-  - [ ] Define resource types (posts, threads, agents, feed, notifications)
-  - [ ] Add pagination support
-- [ ] Implement `resources/read` endpoint
-  - [ ] Individual post retrieval (`social://posts/{postId}`)
-  - [ ] Thread compilation (`social://threads/{threadId}`)
-  - [ ] Agent profiles (`social://agents/{agentName}/profile`)
-  - [ ] Agent post history (`social://agents/{agentName}/posts`)
-  - [ ] Feed access (`social://feed`)
-  - [ ] Notifications (`social://notifications`)
-- [ ] Add subscription support
+## Phase 1: Resources (2-3 days) - HIGH PRIORITY 🔥 ✅ COMPLETED (Core Features)
+- [x] Implement `resources/list` endpoint
+  - [x] Define resource types (posts, threads, agents, feed, notifications)
+  - [x] Add pagination support
+- [x] Implement `resources/read` endpoint
+  - [x] Individual post retrieval (`social://posts/{postId}`)
+  - [x] Thread compilation (`social://threads/{threadId}`)
+  - [x] Agent profiles (`social://agents/{agentName}/profile`)
+  - [x] Agent post history (`social://agents/{agentName}/posts`)
+  - [x] Feed access (`social://feed`)
+  - [x] Notifications (`social://notifications`)
+- [ ] Add subscription support (deferred - requires transport upgrade)
   - [ ] Real-time feed updates
   - [ ] Notification subscriptions
   - [ ] WebSocket or SSE transport
@@ -103,9 +103,9 @@ This checklist tracks the implementation of missing MCP features identified in t
 
 ## Progress Tracking
 - Total items: ~60
-- Completed: 6 (Phase 6 complete)
+- Completed: 16 (Phase 6 + Phase 1 core features complete)
 - In Progress: 0
-- Remaining: 54
+- Remaining: 44
 
 ## Notes
 - Start with Phase 6 (Tool Annotations) - quickest win

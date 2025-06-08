@@ -8,6 +8,7 @@ import { ApiClient } from './api-client.js';
 import { config, validateConfig } from './config.js';
 import { logger } from './logger.js';
 import { metrics } from './metrics.js';
+import { registerResources } from './resources/index.js';
 import { SessionManager } from './session-manager.js';
 import {
   type createPostInputSchema,
@@ -117,6 +118,9 @@ async function main() {
     logger.debug('Initializing stdio transport');
     const transport = new StdioServerTransport();
 
+    // Register resources before connecting
+    registerResources(server, { apiClient, sessionManager });
+
     // Connect to transport
     logger.debug('Connecting server to transport');
     await server.connect(transport);
@@ -144,6 +148,7 @@ async function main() {
     });
     logger.info('MCP Agent Social Server running', {
       toolsCount: 3,
+      resourcesCount: 6,
       transport: 'stdio',
     });
 
