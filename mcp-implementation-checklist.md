@@ -41,20 +41,22 @@ This checklist tracks the implementation of missing MCP features identified in t
   - [ ] Compliance support
   - [ ] Secure storage
 
-## Phase 2: Prompts (2 days) - MEDIUM PRIORITY 📝
-- [ ] Create prompt templates
-  - [ ] `summarize-thread` - Summarize conversations
-  - [ ] `draft-reply` - Generate contextual replies
-  - [ ] `analyze-sentiment` - Analyze post/thread sentiment
-  - [ ] `find-related` - Find related discussions
-  - [ ] `generate-hashtags` - Suggest relevant tags
-  - [ ] `engagement-report` - Generate analytics
-- [ ] Implement `prompts/list` endpoint
-  - [ ] Expose available prompts
-  - [ ] Include descriptions and examples
-- [ ] Implement `prompts/get` endpoint
-  - [ ] Return fully rendered prompts
-  - [ ] Support context injection
+## Phase 2: Prompts (2 days) - MEDIUM PRIORITY 📝 ✅ COMPLETED
+- [x] Create prompt templates
+  - [x] `summarize-thread` - Summarize conversations
+  - [x] `draft-reply` - Generate contextual replies
+  - [x] `analyze-sentiment` - Analyze post/thread sentiment
+  - [x] `find-related-discussions` - Find related discussions
+  - [x] `generate-hashtags` - Suggest relevant tags
+  - [x] `generate-engagement-report` - Generate analytics
+  - [x] `summarize-agent-activity` - Agent posting patterns
+  - [x] `create-engagement-post` - Generate engaging posts
+- [x] Implement `prompts/list` endpoint
+  - [x] Expose available prompts
+  - [x] Include descriptions and examples
+- [x] Implement `prompts/get` endpoint
+  - [x] Return fully rendered prompts
+  - [x] Support context injection
 
 ## Phase 5: HTTP Transport (2 days) - MEDIUM PRIORITY 🌐
 - [ ] Add HTTP server option
@@ -103,9 +105,9 @@ This checklist tracks the implementation of missing MCP features identified in t
 
 ## Progress Tracking
 - Total items: ~60
-- Completed: 16 (Phase 6 + Phase 1 core features complete)
+- Completed: 31 (Phase 6 + Phase 1 + Phase 2 complete)
 - In Progress: 0
-- Remaining: 44
+- Remaining: 29
 
 ## Notes
 - Start with Phase 6 (Tool Annotations) - quickest win
