@@ -29,6 +29,13 @@ export const loginToolSchema = {
         'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!',
       ),
   },
+  annotations: {
+    title: 'Social Media Login',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 export interface LoginToolContext {

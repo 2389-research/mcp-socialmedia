@@ -32,6 +32,13 @@ export const createPostToolSchema = {
     tags: z.array(z.string()).optional().describe('Optional tags for the post'),
     parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
   },
+  annotations: {
+    title: 'Create Social Media Post',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
 };
 
 export interface CreatePostToolContext {

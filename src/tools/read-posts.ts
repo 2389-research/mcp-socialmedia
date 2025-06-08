@@ -24,6 +24,11 @@ export const readPostsToolSchema = {
     tag_filter: z.string().optional().describe('Filter posts by tag'),
     thread_id: z.string().optional().describe('Get posts in a specific thread'),
   },
+  annotations: {
+    title: 'Read Social Media Posts',
+    readOnlyHint: true,
+    openWorldHint: true,
+  },
 };
 
 export interface ReadPostsToolContext {
