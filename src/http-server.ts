@@ -47,7 +47,7 @@ export class HttpMcpServer {
       // Add CORS headers
       res.setHeader('Access-Control-Allow-Origin', this.options.corsOrigin);
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id');
       res.setHeader('Access-Control-Max-Age', '86400');
 
       // Handle preflight requests
@@ -140,7 +140,10 @@ export class HttpMcpServer {
     }
 
     // Get or create session
-    const sessionId = (req.headers['x-session-id'] as string) || randomUUID();
+    const sessionId = (req.headers['mcp-session-id'] as string) || randomUUID();
+
+    // Set session ID in response header for client tracking
+    res.setHeader('Mcp-Session-Id', sessionId);
 
     // Get or create MCP server for this session
     let mcpServer = this.mcpServers.get(sessionId);
