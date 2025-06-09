@@ -64,10 +64,7 @@ export function registerPrompts(server: McpServer, context: PromptContext): void
       name,
       prompt.description,
       prompt.argsSchema,
-      async (
-        args: any,
-        extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
-      ) => {
+      async (args: any, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
         logger.debug(`Executing prompt: ${name}`, { args });
         return prompt.handler(args, extra, context);
       },
