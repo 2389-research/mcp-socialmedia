@@ -3,97 +3,27 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import type { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { config, validateConfig } from './config.js';
+import { HttpMcpServer } from './http-server.js';
 import { logger } from './logger.js';
 import { metrics } from './metrics.js';
 import { registerPrompts } from './prompts/index.js';
 import { registerResources } from './resources/index.js';
 import { SessionManager } from './session-manager.js';
-import {
-  type createPostInputSchema,
-  createPostToolHandler,
-  createPostToolSchema,
-} from './tools/create-post.js';
-import { type loginInputSchema, loginToolHandler, loginToolSchema } from './tools/login.js';
-import {
-  type readPostsInputSchema,
-  readPostsToolHandler,
-  readPostsToolSchema,
-} from './tools/read-posts.js';
+import { registerTools } from './tools/index.js';
 
-const server = new McpServer({
-  name: 'mcp-agent-social',
-  version: '1.0.0',
-});
-
-// Initialize session manager
+// Initialize shared components
 const sessionManager = new SessionManager();
-
-// Initialize API client
 const apiClient = new ApiClient();
+
+// Server instances
+let mcpServer: McpServer | null = null;
+let httpServer: HttpMcpServer | null = null;
 
 // Store cleanup interval globally for shutdown
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 let keepAliveInterval: ReturnType<typeof setInterval> | null = null;
-
-// Register the login tool
-server.registerTool(
-  'login',
-  {
-    description: loginToolSchema.description,
-    inputSchema: loginToolSchema.inputSchema,
-    annotations: loginToolSchema.annotations,
-  },
-  async (args, _mcpContext) => {
-    // Create context for the login tool - use a global session for this MCP server instance
-    const toolContext = {
-      sessionManager,
-      getSessionId: () => 'global-session',
-    };
-
-    return loginToolHandler(args as z.infer<typeof loginInputSchema>, toolContext);
-  },
-);
-
-// Register the read_posts tool
-server.registerTool(
-  'read_posts',
-  {
-    description: readPostsToolSchema.description,
-    inputSchema: readPostsToolSchema.inputSchema,
-    annotations: readPostsToolSchema.annotations,
-  },
-  async (args, _mcpContext) => {
-    // Create context for the read posts tool
-    const toolContext = {
-      apiClient,
-    };
-
-    return readPostsToolHandler(args as z.infer<typeof readPostsInputSchema>, toolContext);
-  },
-);
-
-// Register the create_post tool
-server.registerTool(
-  'create_post',
-  {
-    description: createPostToolSchema.description,
-    inputSchema: createPostToolSchema.inputSchema,
-    annotations: createPostToolSchema.annotations,
-  },
-  async (args, _mcpContext) => {
-    // Create context for the create post tool - use same global session
-    const toolContext = {
-      sessionManager,
-      apiClient,
-      getSessionId: () => 'global-session',
-    };
-
-    return createPostToolHandler(args as z.infer<typeof createPostInputSchema>, toolContext);
-  },
-);
 
 async function main() {
   try {
@@ -116,17 +46,45 @@ async function main() {
       logLevel: config.logLevel,
     });
 
-    logger.debug('Initializing stdio transport');
-    const transport = new StdioServerTransport();
+    // Determine transport mode
+    const transportMode = process.env.MCP_TRANSPORT || 'stdio';
 
-    // Register resources and prompts before connecting
-    registerResources(server, { apiClient, sessionManager });
-    registerPrompts(server, { apiClient, sessionManager });
+    if (transportMode === 'http') {
+      // HTTP mode
+      const httpPort = Number.parseInt(process.env.MCP_HTTP_PORT || '3000', 10);
+      const httpHost = process.env.MCP_HTTP_HOST || 'localhost';
 
-    // Connect to transport
-    logger.debug('Connecting server to transport');
-    await server.connect(transport);
-    logger.info('Server connected successfully');
+      logger.info('Starting in HTTP mode', { port: httpPort, host: httpHost });
+
+      httpServer = new HttpMcpServer(sessionManager, apiClient, {
+        port: httpPort,
+        host: httpHost,
+        enableJsonResponse: process.env.MCP_ENABLE_JSON === 'true',
+        corsOrigin: process.env.MCP_CORS_ORIGIN || '*',
+      });
+
+      await httpServer.start();
+    } else {
+      // Stdio mode (default)
+      logger.info('Starting in stdio mode');
+
+      mcpServer = new McpServer({
+        name: 'mcp-agent-social',
+        version: '1.0.0',
+      });
+
+      const transport = new StdioServerTransport();
+
+      // Register all capabilities
+      registerTools(mcpServer, { sessionManager, apiClient });
+      registerResources(mcpServer, { apiClient, sessionManager });
+      registerPrompts(mcpServer, { apiClient, sessionManager });
+
+      // Connect to transport
+      logger.debug('Connecting server to transport');
+      await mcpServer.connect(transport);
+      logger.info('Server connected successfully');
+    }
 
     // The transport itself doesn't expose error handlers, but we can handle stdio events
     process.stdin.on('error', (error) => {
@@ -214,8 +172,13 @@ async function shutdown(signal: string) {
 
   // Close server
   try {
-    await server.close();
-    logger.info('Server closed successfully');
+    if (httpServer) {
+      await httpServer.stop();
+      logger.info('HTTP server closed successfully');
+    } else if (mcpServer) {
+      await mcpServer.close();
+      logger.info('MCP server closed successfully');
+    }
   } catch (error) {
     logger.error('Error closing server', { error });
   }
