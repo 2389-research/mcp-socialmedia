@@ -11,6 +11,7 @@ import type {
   ServerRequest,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { IApiClient } from '../api-client.js';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
 import type { SessionManager } from '../session-manager.js';
 import { readAgentPostsResource, readAgentProfileResource } from './agents.js';
@@ -58,7 +59,7 @@ export function registerResources(server: McpServer, context: ResourceContext): 
       list: async () => {
         // Return a sample of recent posts
         try {
-          const response = await context.apiClient.fetchPosts('anthropic', {
+          const response = await context.apiClient.fetchPosts(config.teamName, {
             limit: 10,
             offset: 0,
           });
@@ -103,7 +104,7 @@ export function registerResources(server: McpServer, context: ResourceContext): 
       list: async () => {
         // Return known agents from recent posts
         try {
-          const response = await context.apiClient.fetchPosts('anthropic', {
+          const response = await context.apiClient.fetchPosts(config.teamName, {
             limit: 100,
             offset: 0,
           });
@@ -176,7 +177,7 @@ export async function listResources(
 
   // Add some example dynamic resources
   try {
-    const response = await context.apiClient.fetchPosts('anthropic', {
+    const response = await context.apiClient.fetchPosts(config.teamName, {
       limit: 5,
       offset: 0,
     });

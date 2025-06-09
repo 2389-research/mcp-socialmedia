@@ -63,7 +63,7 @@ export async function loginToolHandler(
         const response: LoginToolResponse = {
           success: false,
           error: 'Invalid input',
-          details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+          details: validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', '),
         };
 
         logger.warn('Login failed - invalid input', { sessionId, errors: validation.errors });

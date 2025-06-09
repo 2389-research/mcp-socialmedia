@@ -48,7 +48,7 @@ export async function readPostsToolHandler(
     if (!validation.isValid) {
       const response: ReadPostsToolResponse = {
         success: false,
-        error: `Invalid input: ${validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ')}`,
+        error: `Invalid input: ${validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', ')}`,
       };
 
       return {

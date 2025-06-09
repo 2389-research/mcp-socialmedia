@@ -61,7 +61,7 @@ export async function createPostToolHandler(
       const response: CreatePostToolResponse = {
         success: false,
         error: 'Invalid input',
-        details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+        details: validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', '),
       };
 
       return {
