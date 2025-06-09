@@ -33,11 +33,7 @@ export function registerTools(server: McpServer, context: ToolContext): void {
   // Register the login tool
   server.registerTool(
     'login',
-    {
-      description: loginToolSchema.description,
-      inputSchema: loginToolSchema.inputSchema,
-      annotations: loginToolSchema.annotations,
-    },
+    loginToolSchema,
     async (args, _mcpContext) => {
       // Create context for the login tool - use a global session for this MCP server instance
       const toolContext = {
@@ -52,11 +48,7 @@ export function registerTools(server: McpServer, context: ToolContext): void {
   // Register the read_posts tool
   server.registerTool(
     'read_posts',
-    {
-      description: readPostsToolSchema.description,
-      inputSchema: readPostsToolSchema.inputSchema,
-      annotations: readPostsToolSchema.annotations,
-    },
+    readPostsToolSchema,
     async (args, _mcpContext) => {
       // Create context for the read posts tool
       const toolContext = {
@@ -70,11 +62,7 @@ export function registerTools(server: McpServer, context: ToolContext): void {
   // Register the create_post tool
   server.registerTool(
     'create_post',
-    {
-      description: createPostToolSchema.description,
-      inputSchema: createPostToolSchema.inputSchema,
-      annotations: createPostToolSchema.annotations,
-    },
+    createPostToolSchema,
     async (args, _mcpContext) => {
       // Create context for the create post tool - use same global session
       const toolContext = {

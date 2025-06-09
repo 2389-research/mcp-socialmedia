@@ -19,7 +19,8 @@ export interface HttpServerOptions {
 
 export class HttpMcpServer {
   private httpServer: ReturnType<typeof createServer> | null = null;
-  private mcpServers: Map<string, McpServer> = new Map();
+  private mcpServer: McpServer | null = null;
+  private transport: StreamableHTTPServerTransport | null = null;
   private readonly options: Required<HttpServerOptions>;
 
   constructor(
@@ -42,6 +43,9 @@ export class HttpMcpServer {
     if (this.httpServer) {
       throw new Error('HTTP server already started');
     }
+
+    // Create single MCP server instance
+    await this.createMcpServer();
 
     this.httpServer = createServer(async (req, res) => {
       // Add CORS headers
@@ -100,16 +104,17 @@ export class HttpMcpServer {
       return;
     }
 
-    // Close all MCP server connections
-    for (const [sessionId, server] of this.mcpServers) {
+    // Close MCP server connection
+    if (this.mcpServer) {
       try {
-        await server.close();
-        logger.debug('Closed MCP server for session', { sessionId });
+        await this.mcpServer.close();
+        logger.debug('Closed MCP server');
       } catch (error) {
-        logger.error('Error closing MCP server', { sessionId, error });
+        logger.error('Error closing MCP server', { error });
       }
+      this.mcpServer = null;
+      this.transport = null;
     }
-    this.mcpServers.clear();
 
     // Close HTTP server
     return new Promise((resolve, reject) => {
@@ -139,30 +144,13 @@ export class HttpMcpServer {
       return;
     }
 
-    // Get or create session
+    // Get or create session ID
     const sessionId = (req.headers['mcp-session-id'] as string) || randomUUID();
 
     // Set session ID in response header for client tracking
     res.setHeader('Mcp-Session-Id', sessionId);
 
-    // Get or create MCP server for this session
-    let mcpServer = this.mcpServers.get(sessionId);
-    let transport: StreamableHTTPServerTransport | undefined;
-
-    if (!mcpServer) {
-      // Create new MCP server for this session
-      const { server, transport: newTransport } = await this.createMcpServer(sessionId);
-      mcpServer = server;
-      transport = newTransport;
-      this.mcpServers.set(sessionId, mcpServer);
-
-      logger.info('Created new MCP server for session', { sessionId });
-    } else {
-      // Find existing transport
-      transport = (mcpServer as any).__transport;
-    }
-
-    if (!transport) {
+    if (!this.transport) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Transport not found' }));
       return;
@@ -175,16 +163,13 @@ export class HttpMcpServer {
     }
 
     // Let transport handle the request
-    await transport.handleRequest(req, res, body);
+    await this.transport.handleRequest(req, res, body);
   }
 
   /**
-   * Create a new MCP server instance with HTTP transport
+   * Create the MCP server instance with HTTP transport
    */
-  private async createMcpServer(sessionId: string): Promise<{
-    server: McpServer;
-    transport: StreamableHTTPServerTransport;
-  }> {
+  private async createMcpServer(): Promise<void> {
     // Import the registration functions dynamically to avoid circular dependencies
     const { hooksManager } = await import('./hooks/index.js');
     const { registerPrompts } = await import('./prompts/index.js');
@@ -194,14 +179,14 @@ export class HttpMcpServer {
     const { registerTools } = await import('./tools/index.js');
 
     // Create MCP server
-    const server = new McpServer({
+    this.mcpServer = new McpServer({
       name: 'mcp-agent-social',
       version: '1.0.0',
     });
 
     // Create HTTP transport
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => sessionId,
+    this.transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: randomUUID,
       enableJsonResponse: this.options.enableJsonResponse,
       onsessioninitialized: (id) => {
         logger.debug('Session initialized', { sessionId: id });
@@ -209,19 +194,14 @@ export class HttpMcpServer {
     });
 
     // Register all capabilities
-    registerTools(server, { sessionManager: this.sessionManager, apiClient: this.apiClient, hooksManager });
-    registerResources(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerPrompts(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerSampling(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerRoots(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerTools(this.mcpServer, { sessionManager: this.sessionManager, apiClient: this.apiClient, hooksManager });
+    registerResources(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerPrompts(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerSampling(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerRoots(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
 
     // Connect transport
-    await server.connect(transport);
-
-    // Store transport reference for later use
-    (server as any).__transport = transport;
-
-    return { server, transport };
+    await this.mcpServer.connect(this.transport);
   }
 
   /**
