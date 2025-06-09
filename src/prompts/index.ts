@@ -20,6 +20,7 @@ import { summarizePrompts } from './summarize.js';
 export interface PromptContext {
   apiClient: IApiClient;
   sessionManager: SessionManager;
+  hooksManager?: any;
 }
 
 // Type for prompt handlers - use any for args since prompts have different arg types

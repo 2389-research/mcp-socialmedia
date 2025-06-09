@@ -21,6 +21,7 @@ import { RESOURCE_PATTERNS } from './types.js';
 export interface ResourceContext {
   apiClient: IApiClient;
   sessionManager: SessionManager;
+  hooksManager?: any;
 }
 
 /**

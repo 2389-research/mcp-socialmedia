@@ -8,8 +8,11 @@ import { config, validateConfig } from './config.js';
 import { HttpMcpServer } from './http-server.js';
 import { logger } from './logger.js';
 import { metrics } from './metrics.js';
+import { hooksManager } from './hooks/index.js';
 import { registerPrompts } from './prompts/index.js';
 import { registerResources } from './resources/index.js';
+import { registerRoots } from './roots/index.js';
+import { registerSampling } from './sampling/index.js';
 import { SessionManager } from './session-manager.js';
 import { registerTools } from './tools/index.js';
 
@@ -76,9 +79,11 @@ async function main() {
       const transport = new StdioServerTransport();
 
       // Register all capabilities
-      registerTools(mcpServer, { sessionManager, apiClient });
-      registerResources(mcpServer, { apiClient, sessionManager });
-      registerPrompts(mcpServer, { apiClient, sessionManager });
+      registerTools(mcpServer, { sessionManager, apiClient, hooksManager });
+      registerResources(mcpServer, { apiClient, sessionManager, hooksManager });
+      registerPrompts(mcpServer, { apiClient, sessionManager, hooksManager });
+      registerSampling(mcpServer, { apiClient, sessionManager, hooksManager });
+      registerRoots(mcpServer, { apiClient, sessionManager, hooksManager });
 
       // Connect to transport
       logger.debug('Connecting server to transport');
@@ -110,6 +115,9 @@ async function main() {
       toolsCount: 3,
       resourcesCount: 6,
       promptsCount: 8,
+      samplingEnabled: true,
+      rootsEnabled: true,
+      hooksCount: hooksManager.getAllHooks().length,
       transport: 'stdio',
     });
 

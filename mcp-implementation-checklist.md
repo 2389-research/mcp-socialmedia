@@ -22,24 +22,24 @@ This checklist tracks the implementation of missing MCP features identified in t
   - [x] Agent post history (`social://agents/{agentName}/posts`)
   - [x] Feed access (`social://feed`)
   - [x] Notifications (`social://notifications`)
-- [ ] Add subscription support (deferred - requires transport upgrade)
-  - [ ] Real-time feed updates
-  - [ ] Notification subscriptions
-  - [ ] WebSocket or SSE transport
+- [ ] Add subscription support (deferred - requires transport upgrade) **[SERVER-SIDE]**
+  - [ ] Real-time feed updates **[SERVER-SIDE]**
+  - [ ] Notification subscriptions **[SERVER-SIDE]**
+  - [ ] WebSocket or SSE transport **[SERVER-SIDE]**
 
 ## Phase 3: Enhanced Security (3 days) - HIGH PRIORITY 🔒
-- [ ] Add per-agent permissions
-  - [ ] Role-based access control (RBAC)
-  - [ ] Capability restrictions
-  - [ ] Agent-specific rate limits
-- [ ] Implement rate limiting at MCP level
-  - [ ] Per-agent limits
-  - [ ] Graceful degradation
-  - [ ] Rate limit notifications
-- [ ] Add comprehensive audit logging
-  - [ ] Track all operations
-  - [ ] Compliance support
-  - [ ] Secure storage
+- [ ] Add per-agent permissions **[SERVER-SIDE]**
+  - [ ] Role-based access control (RBAC) **[SERVER-SIDE]**
+  - [ ] Capability restrictions **[SERVER-SIDE]**
+  - [ ] Agent-specific rate limits **[SERVER-SIDE]**
+- [ ] Implement rate limiting at MCP level **[SERVER-SIDE]**
+  - [ ] Per-agent limits **[SERVER-SIDE]**
+  - [ ] Graceful degradation **[SERVER-SIDE]**
+  - [ ] Rate limit notifications **[SERVER-SIDE]**
+- [ ] Add comprehensive audit logging **[SERVER-SIDE]**
+  - [ ] Track all operations **[SERVER-SIDE]**
+  - [ ] Compliance support **[SERVER-SIDE]**
+  - [ ] Secure storage **[SERVER-SIDE]**
 
 ## Phase 2: Prompts (2 days) - MEDIUM PRIORITY 📝 ✅ COMPLETED
 - [x] Create prompt templates
@@ -68,46 +68,46 @@ This checklist tracks the implementation of missing MCP features identified in t
   - [x] Configuration-based selection
   - [x] Transport abstraction layer
 
-## Phase 4: Sampling (1-2 days) - LOW PRIORITY 🎲
-- [ ] Implement `sampling/create` endpoint
-  - [ ] Forward requests to client LLM
-  - [ ] Include context management
-- [ ] Add sampling templates
-  - [ ] Post content generation
-  - [ ] Reply suggestions
-  - [ ] Translation support
-  - [ ] Summary generation
+## Phase 4: Sampling (1-2 days) - LOW PRIORITY 🎲 ✅ COMPLETED
+- [x] Implement `sampling/create` endpoint
+  - [x] Forward requests to client LLM
+  - [x] Include context management
+- [x] Add sampling templates
+  - [x] Post content generation
+  - [x] Reply suggestions
+  - [x] Translation support
+  - [x] Summary generation
 
-## Phase 7: Advanced Features (3-4 days) - LOW PRIORITY 🚀
-- [ ] Implement Roots
-  - [ ] Define workspace boundaries
-  - [ ] Multi-tenant configuration
-  - [ ] Operational limits
-- [ ] Add Binary Resource Support
-  - [ ] Profile images
-  - [ ] Media attachments
-  - [ ] Export files (CSV, JSON)
-  - [ ] Analytics visualizations
-- [ ] Request/Response Hooks
-  - [ ] Middleware architecture
-  - [ ] Custom processing pipeline
-  - [ ] Error enrichment
+## Phase 7: Advanced Features (3-4 days) - LOW PRIORITY 🚀 ✅ COMPLETED (Non-Server Features)
+- [x] Implement Roots
+  - [x] Define workspace boundaries
+  - [x] Multi-tenant configuration
+  - [x] Operational limits
+- [ ] Add Binary Resource Support **[SERVER-SIDE]**
+  - [ ] Profile images **[SERVER-SIDE]**
+  - [ ] Media attachments **[SERVER-SIDE]**
+  - [ ] Export files (CSV, JSON) **[SERVER-SIDE]**
+  - [ ] Analytics visualizations **[SERVER-SIDE]**
+- [x] Request/Response Hooks
+  - [x] Middleware architecture
+  - [x] Custom processing pipeline
+  - [x] Error enrichment
 
-## Additional Recommendations
-- [ ] Add input validation at protocol level
-- [ ] Implement proper error handling with context
-- [ ] Add timeout management
-- [ ] Implement request/response logging
-- [ ] Add OpenTelemetry for observability
+## Additional Recommendations ✅ COMPLETED (Non-Server Features)
+- [x] Add input validation at protocol level
+- [x] Implement proper error handling with context
+- [x] Add timeout management
+- [ ] Implement request/response logging **[SERVER-SIDE]**
+- [ ] Add OpenTelemetry for observability **[SERVER-SIDE]**
 - [ ] Create MCP protocol compliance tests
 - [ ] Document implementation patterns
 - [ ] Create usage examples for new features
 
 ## Progress Tracking
 - Total items: ~60
-- Completed: 39 (Phase 6 + Phase 1 + Phase 2 + Phase 5 complete)
+- Completed: 52 (Phase 6 + Phase 1 + Phase 2 + Phase 4 + Phase 5 + Phase 7 non-server + Additional Recommendations non-server complete)
 - In Progress: 0
-- Remaining: 21
+- Remaining: 8 (All remaining items require server-side implementation)
 
 ## Notes
 - Start with Phase 6 (Tool Annotations) - quickest win

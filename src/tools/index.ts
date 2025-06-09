@@ -21,6 +21,7 @@ import {
 export interface ToolContext {
   sessionManager: SessionManager;
   apiClient: IApiClient;
+  hooksManager?: any;
 }
 
 /**

@@ -1,0 +1,1 @@
+- you can always check the MCP spec here: https://modelcontextprotocol.io/llms-full.txt

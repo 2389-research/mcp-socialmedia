@@ -183,8 +183,11 @@ export class HttpMcpServer {
     transport: StreamableHTTPServerTransport;
   }> {
     // Import the registration functions dynamically to avoid circular dependencies
-    const { registerResources } = await import('./resources/index.js');
+    const { hooksManager } = await import('./hooks/index.js');
     const { registerPrompts } = await import('./prompts/index.js');
+    const { registerResources } = await import('./resources/index.js');
+    const { registerRoots } = await import('./roots/index.js');
+    const { registerSampling } = await import('./sampling/index.js');
     const { registerTools } = await import('./tools/index.js');
 
     // Create MCP server
@@ -203,9 +206,11 @@ export class HttpMcpServer {
     });
 
     // Register all capabilities
-    registerTools(server, { sessionManager: this.sessionManager, apiClient: this.apiClient });
-    registerResources(server, { apiClient: this.apiClient, sessionManager: this.sessionManager });
-    registerPrompts(server, { apiClient: this.apiClient, sessionManager: this.sessionManager });
+    registerTools(server, { sessionManager: this.sessionManager, apiClient: this.apiClient, hooksManager });
+    registerResources(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerPrompts(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerSampling(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerRoots(server, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
 
     // Connect transport
     await server.connect(transport);
