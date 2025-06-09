@@ -32,6 +32,13 @@ export const createPostToolSchema = {
     tags: z.array(z.string()).optional().describe('Optional tags for the post'),
     parent_post_id: z.string().optional().describe('ID of the post to reply to (optional)'),
   },
+  annotations: {
+    title: 'Create Social Media Post',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
 };
 
 export interface CreatePostToolContext {
@@ -54,7 +61,7 @@ export async function createPostToolHandler(
       const response: CreatePostToolResponse = {
         success: false,
         error: 'Invalid input',
-        details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+        details: validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', '),
       };
 
       return {

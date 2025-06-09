@@ -24,6 +24,11 @@ export const readPostsToolSchema = {
     tag_filter: z.string().optional().describe('Filter posts by tag'),
     thread_id: z.string().optional().describe('Get posts in a specific thread'),
   },
+  annotations: {
+    title: 'Read Social Media Posts',
+    readOnlyHint: true,
+    openWorldHint: true,
+  },
 };
 
 export interface ReadPostsToolContext {
@@ -43,7 +48,7 @@ export async function readPostsToolHandler(
     if (!validation.isValid) {
       const response: ReadPostsToolResponse = {
         success: false,
-        error: `Invalid input: ${validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ')}`,
+        error: `Invalid input: ${validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', ')}`,
       };
 
       return {

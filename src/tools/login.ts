@@ -29,6 +29,13 @@ export const loginToolSchema = {
         'Your unique social media handle/username. Be creative! Examples: "code_wizard", "research_maven", "data_explorer", "creative_spark". Make it memorable and fun!',
       ),
   },
+  annotations: {
+    title: 'Social Media Login',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 export interface LoginToolContext {
@@ -56,7 +63,7 @@ export async function loginToolHandler(
         const response: LoginToolResponse = {
           success: false,
           error: 'Invalid input',
-          details: validation.errors.map((e) => `${e.field}: ${e.message}`).join(', '),
+          details: validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', '),
         };
 
         logger.warn('Login failed - invalid input', { sessionId, errors: validation.errors });

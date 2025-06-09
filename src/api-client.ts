@@ -104,23 +104,36 @@ export class ApiClient implements IApiClient {
     const response = await this.makeRequest('GET', url);
     const remoteResponse = response as RemotePostsResponse;
 
+    // Validate remote response
+    if (!remoteResponse.posts || !Array.isArray(remoteResponse.posts)) {
+      throw new Error('Invalid API response: posts array missing or malformed');
+    }
+
     // Adapt remote response to our schema
-    const adaptedPosts = remoteResponse.posts.map((post: RemotePost) => ({
-      id: post.postId,
-      author_name: post.author,
-      content: post.content,
-      tags: post.tags || [],
-      timestamp: post.createdAt?._seconds
-        ? new Date(post.createdAt._seconds * 1000).toISOString()
-        : new Date().toISOString(),
-      parent_post_id: post.parentPostId || undefined,
-      team_name: teamName,
-    }));
+    const adaptedPosts = remoteResponse.posts
+      .filter((post: RemotePost) => {
+        if (!post.postId || !post.author || !post.content) {
+          logger.warn('Skipping malformed post', { post });
+          return false;
+        }
+        return true;
+      })
+      .map((post: RemotePost) => ({
+        id: post.postId,
+        author_name: post.author,
+        content: post.content,
+        tags: post.tags || [],
+        timestamp: post.createdAt?._seconds
+          ? new Date(post.createdAt._seconds * 1000).toISOString()
+          : new Date().toISOString(),
+        parent_post_id: post.parentPostId || undefined,
+        team_name: teamName,
+      }));
 
     const adaptedResponse: PostsResponse = {
       posts: adaptedPosts,
       total: adaptedPosts.length, // Remote API doesn't provide total, estimate from current page
-      has_more: remoteResponse.nextOffset !== null,
+      has_more: Boolean(remoteResponse.nextOffset),
     };
 
     return adaptedResponse;
