@@ -1,6 +1,8 @@
 // ABOUTME: Enhanced logging utility for the MCP Agent Social Media Server
 // ABOUTME: Provides structured logging with levels, context, and performance tracking
 
+import { ENV_KEYS } from './config.js';
+
 export enum LogLevel {
   SILENT = -1,
   ERROR = 0,
@@ -23,7 +25,7 @@ export class Logger {
   private startTime: number;
 
   private constructor() {
-    this.logLevel = this.parseLogLevel(process.env.LOG_LEVEL || 'INFO');
+    this.logLevel = this.parseLogLevel(process.env[ENV_KEYS.LOG_LEVEL] || 'INFO');
     this.startTime = Date.now();
   }
 
@@ -61,18 +63,24 @@ export class Logger {
         contextStr = ` ${JSON.stringify(context)}`;
       } catch (error) {
         // Handle circular references or other JSON serialization errors
-        contextStr = ` ${JSON.stringify({
-          ...context,
-          _jsonError: error instanceof Error ? error.message : 'Unknown JSON error'
-        }, (key, value) => {
-          if (typeof value === 'object' && value !== null) {
-            // Simple circular reference detection
-            if (typeof value.toString === 'function' && value.toString().includes('[object Object]')) {
-              return '[Object]';
+        contextStr = ` ${JSON.stringify(
+          {
+            ...context,
+            _jsonError: error instanceof Error ? error.message : 'Unknown JSON error',
+          },
+          (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+              // Simple circular reference detection
+              if (
+                typeof value.toString === 'function' &&
+                value.toString().includes('[object Object]')
+              ) {
+                return '[Object]';
+              }
             }
-          }
-          return value;
-        })}`;
+            return value;
+          },
+        )}`;
       }
     }
 

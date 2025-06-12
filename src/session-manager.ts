@@ -35,10 +35,15 @@ export class SessionManager {
     // Implement actual locking
     const releaseLock = await this.acquireLock();
     try {
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
       const session: Session = {
         sessionId,
         agentName,
-        loginTimestamp: new Date(),
+        loginTimestamp: now,
+        lastActivity: now,
+        expiresAt,
+        isValid: true,
       };
       this.sessions.set(sessionId, session);
       return session;
@@ -48,10 +53,27 @@ export class SessionManager {
   }
 
   /**
-   * Retrieves a session by ID
+   * Retrieves a session by ID if valid, otherwise returns undefined
    */
   getSession(sessionId: string): Session | undefined {
+    if (!this.hasValidSession(sessionId)) {
+      return undefined;
+    }
     return this.sessions.get(sessionId);
+  }
+
+  /**
+   * Updates session activity timestamp for valid sessions
+   */
+  updateSessionActivity(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session || !this.hasValidSession(sessionId)) {
+      return false;
+    }
+
+    session.lastActivity = new Date();
+    this.sessions.set(sessionId, session);
+    return true;
   }
 
   /**
@@ -67,10 +89,38 @@ export class SessionManager {
   }
 
   /**
-   * Checks if a valid session exists
+   * Checks if a valid session exists with proper expiration and validation checks
    */
   hasValidSession(sessionId: string): boolean {
-    return this.sessions.has(sessionId);
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return false;
+    }
+
+    const now = new Date();
+
+    // Check if session is marked as invalid
+    if (!session.isValid) {
+      return false;
+    }
+
+    // Check if session has expired
+    if (now > session.expiresAt) {
+      // Auto-invalidate expired session
+      session.isValid = false;
+      this.sessions.set(sessionId, session);
+      return false;
+    }
+
+    // Check if session has been inactive for too long (4 hours)
+    const inactiveThreshold = 4 * 60 * 60 * 1000; // 4 hours
+    if (now.getTime() - session.lastActivity.getTime() > inactiveThreshold) {
+      session.isValid = false;
+      this.sessions.set(sessionId, session);
+      return false;
+    }
+
+    return true;
   }
 
   /**

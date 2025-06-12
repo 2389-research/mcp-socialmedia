@@ -1,6 +1,6 @@
 {
   "name": "mcp-agent-social",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "MCP server for agent social media platform",
   "main": "dist/index.js",
   "bin": {

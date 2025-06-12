@@ -7,6 +7,12 @@ import fetch, { type RequestInit, type Response } from 'node-fetch';
 export type FetchFunction = typeof fetch;
 import { config } from './config.js';
 import { logger } from './logger.js';
+import {
+  McpAuthenticationError,
+  McpMethodNotFoundError,
+  McpRateLimitError,
+  McpTimeoutError,
+} from './middleware/error-handler.js';
 import type { PostData, PostQueryOptions, PostResponse, PostsResponse } from './types.js';
 
 // Remote API response types
@@ -208,7 +214,6 @@ export class ApiClient implements IApiClient {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          hasApiKey: !!this.apiKey,
         },
         hasBody: !!body,
         timeout: this.timeout,
@@ -235,7 +240,7 @@ export class ApiClient implements IApiClient {
           duration,
           timeout: true,
         });
-        throw new Error(`Request timeout after ${this.timeout}ms`);
+        throw new McpTimeoutError(`Request timeout after ${this.timeout}ms`, this.timeout);
       }
       logger.apiError(method, url, error instanceof Error ? error : new Error(String(error)), {
         duration,
@@ -268,13 +273,13 @@ export class ApiClient implements IApiClient {
 
     switch (response.status) {
       case 401:
-        throw new Error(`Authentication failed: ${errorMessage}`);
+        throw new McpAuthenticationError(`Authentication failed: ${errorMessage}`);
       case 403:
         throw new Error(`Access forbidden: ${errorMessage}`);
       case 404:
-        throw new Error(`Resource not found: ${errorMessage}`);
+        throw new McpMethodNotFoundError(`Resource not found: ${errorMessage}`);
       case 429:
-        throw new Error(`Rate limit exceeded: ${errorMessage}`);
+        throw new McpRateLimitError(`Rate limit exceeded: ${errorMessage}`);
       case 500:
       case 502:
       case 503:

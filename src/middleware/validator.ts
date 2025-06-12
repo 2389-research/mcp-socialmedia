@@ -9,7 +9,7 @@ const McpRequestSchema = z.object({
   jsonrpc: z.literal('2.0'),
   id: z.union([z.string(), z.number(), z.null()]),
   method: z.string(),
-  params: z.record(z.any()).optional()
+  params: z.record(z.any()).optional(),
 });
 
 // Base MCP response schema
@@ -17,89 +17,67 @@ const McpResponseSchema = z.object({
   jsonrpc: z.literal('2.0'),
   id: z.union([z.string(), z.number(), z.null()]),
   result: z.any().optional(),
-  error: z.object({
-    code: z.number(),
-    message: z.string(),
-    data: z.any().optional()
-  }).optional()
+  error: z
+    .object({
+      code: z.number(),
+      message: z.string(),
+      data: z.any().optional(),
+    })
+    .optional(),
 });
 
-// Method-specific validation schemas
+// Method-specific validation schemas (only validate params, base structure already validated)
 const MethodSchemas = {
   'tools/list': {
     request: z.object({
-      jsonrpc: z.literal('2.0'),
-      id: z.union([z.string(), z.number(), z.null()]),
-      method: z.literal('tools/list'),
-      params: z.object({}).optional()
+      params: z.object({}).optional(),
     }),
     response: z.object({
-      tools: z.array(z.object({
-        name: z.string(),
-        description: z.string(),
-        inputSchema: z.record(z.any())
-      }))
-    })
+      tools: z.array(
+        z.object({
+          name: z.string(),
+          description: z.string(),
+          inputSchema: z.record(z.any()),
+        }),
+      ),
+    }),
   },
   'tools/call': {
     request: z.object({
-      jsonrpc: z.literal('2.0'),
-      id: z.union([z.string(), z.number(), z.null()]),
-      method: z.literal('tools/call'),
       params: z.object({
         name: z.string(),
-        arguments: z.record(z.any()).optional()
-      })
+        arguments: z.record(z.any()).optional(),
+      }),
     }),
     response: z.object({
-      content: z.array(z.object({
-        type: z.string(),
-        text: z.string().optional(),
-        data: z.any().optional()
-      }))
-    })
+      content: z.array(
+        z.object({
+          type: z.string(),
+          text: z.string().optional(),
+          data: z.any().optional(),
+        }),
+      ),
+    }),
   },
   'resources/list': {
     request: z.object({
-      jsonrpc: z.literal('2.0'),
-      id: z.union([z.string(), z.number(), z.null()]),
-      method: z.literal('resources/list'),
-      params: z.object({
-        cursor: z.string().optional()
-      }).optional()
+      params: z
+        .object({
+          cursor: z.string().optional(),
+        })
+        .optional(),
     }),
     response: z.object({
-      resources: z.array(z.object({
-        uri: z.string(),
-        name: z.string(),
-        description: z.string().optional(),
-        mimeType: z.string().optional()
-      }))
-    })
+      resources: z.array(
+        z.object({
+          uri: z.string(),
+          name: z.string(),
+          description: z.string().optional(),
+          mimeType: z.string().optional(),
+        }),
+      ),
+    }),
   },
-  'sampling/create': {
-    request: z.object({
-      jsonrpc: z.literal('2.0'),
-      id: z.union([z.string(), z.number(), z.null()]),
-      method: z.literal('sampling/create'),
-      params: z.object({
-        model: z.string().optional(),
-        messages: z.array(z.object({
-          role: z.enum(['system', 'user', 'assistant']),
-          content: z.string()
-        })),
-        maxTokens: z.number().positive().optional(),
-        temperature: z.number().min(0).max(2).optional()
-      })
-    }),
-    response: z.object({
-      role: z.literal('assistant'),
-      content: z.object({
-        type: z.literal('text'),
-        text: z.string()
-      })
-    })
-  }
 };
 
 export class RequestValidator {
@@ -113,13 +91,15 @@ export class RequestValidator {
     this.validationCount++;
 
     try {
-      // First validate base MCP structure
+      // Validate base MCP structure
       McpRequestSchema.parse(request);
 
-      // Then validate method-specific structure if available
+      // Then validate method-specific params only (avoiding redundant validation)
       const methodSchema = MethodSchemas[request.method as keyof typeof MethodSchemas];
       if (methodSchema?.request) {
-        methodSchema.request.parse(request);
+        // Extract just the params and validate them separately
+        const paramsToValidate = { params: request.params };
+        methodSchema.request.parse(paramsToValidate);
       }
 
       // Additional custom validations
@@ -127,14 +107,15 @@ export class RequestValidator {
 
       logger.debug('Request validation passed', {
         method: request.method,
-        id: request.id
+        id: request.id,
       });
-
     } catch (error) {
       this.validationErrors++;
 
       if (error instanceof z.ZodError) {
-        const validationError = new Error(`Request validation failed: ${error.errors.map(e => e.message).join(', ')}`);
+        const validationError = new Error(
+          `Request validation failed: ${error.errors.map((e) => e.message).join(', ')}`,
+        );
         (validationError as any).code = -32602; // Invalid params
         (validationError as any).data = error.errors;
         throw validationError;
@@ -159,10 +140,11 @@ export class RequestValidator {
       }
 
       logger.debug('Response validation passed', { method });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const validationError = new Error(`Response validation failed: ${error.errors.map(e => e.message).join(', ')}`);
+        const validationError = new Error(
+          `Response validation failed: ${error.errors.map((e) => e.message).join(', ')}`,
+        );
         (validationError as any).code = -32603; // Internal error
         (validationError as any).data = error.errors;
         throw validationError;
@@ -179,18 +161,22 @@ export class RequestValidator {
     // Validate content length limits
     if (request.params) {
       const stringContent = JSON.stringify(request.params);
-      if (stringContent.length > 100000) { // 100KB limit
+      if (stringContent.length > 100000) {
+        // 100KB limit
         throw new Error('Request payload exceeds maximum size limit');
       }
     }
 
     // Validate method exists
     const allowedMethods = [
-      'tools/list', 'tools/call',
-      'resources/list', 'resources/read',
-      'prompts/list', 'prompts/get',
+      'tools/list',
+      'tools/call',
+      'resources/list',
+      'resources/read',
+      'prompts/list',
+      'prompts/get',
       'sampling/create',
-      'roots/list'
+      'roots/list',
     ];
 
     if (!allowedMethods.includes(request.method)) {
@@ -221,8 +207,10 @@ export class RequestValidator {
     return {
       totalValidations: this.validationCount,
       validationErrors: this.validationErrors,
-      successRate: this.validationCount > 0 ?
-        ((this.validationCount - this.validationErrors) / this.validationCount) : 1
+      successRate:
+        this.validationCount > 0
+          ? (this.validationCount - this.validationErrors) / this.validationCount
+          : 1,
     };
   }
 }

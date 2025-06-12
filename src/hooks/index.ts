@@ -2,20 +2,22 @@
 // ABOUTME: Provides extensible pipeline for request preprocessing and response enrichment
 
 import { logger } from '../logger.js';
+import { McpRateLimitError } from '../middleware/error-handler.js';
 import {
-  Hook,
+  type ErrorHook,
+  type Hook,
+  type HookContext,
+  HookPipeline,
   HookType,
-  RequestHook,
-  ResponseHook,
-  ErrorHook,
-  HookContext,
-  HookPipeline
+  type RequestHook,
+  type ResponseHook,
 } from './types.js';
 
 export class HooksManager {
   private requestHooks: RequestHook[] = [];
   private responseHooks: ResponseHook[] = [];
   private errorHooks: ErrorHook[] = [];
+  private rateLimitWindows: Map<string, number[]> = new Map();
 
   constructor() {
     // Register default hooks
@@ -23,7 +25,7 @@ export class HooksManager {
     logger.info('Hooks manager initialized', {
       requestHooks: this.requestHooks.length,
       responseHooks: this.responseHooks.length,
-      errorHooks: this.errorHooks.length
+      errorHooks: this.errorHooks.length,
     });
   }
 
@@ -68,12 +70,12 @@ export class HooksManager {
 
         logger.debug('Request hook executed', {
           hookName: hook.name,
-          method: processedRequest.method
+          method: processedRequest.method,
         });
       } catch (error) {
         logger.error('Request hook failed', {
           hookName: hook.name,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
 
         // Don't fail the entire request for hook errors
@@ -105,12 +107,12 @@ export class HooksManager {
 
         logger.debug('Response hook executed', {
           hookName: hook.name,
-          method: request.method
+          method: request.method,
         });
       } catch (error) {
         logger.error('Response hook failed', {
           hookName: hook.name,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
 
         if (hook.critical) {
@@ -141,12 +143,12 @@ export class HooksManager {
 
         logger.debug('Error hook executed', {
           hookName: hook.name,
-          originalError: error.message
+          originalError: error.message,
         });
       } catch (hookError) {
         logger.error('Error hook failed', {
           hookName: hook.name,
-          hookError: hookError instanceof Error ? hookError.message : String(hookError)
+          hookError: hookError instanceof Error ? hookError.message : String(hookError),
         });
       }
     }
@@ -168,10 +170,10 @@ export class HooksManager {
         logger.info('Processing request', {
           method: request.method,
           sessionId: context.sessionId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return request;
-      }
+      },
     });
 
     // Response enrichment hook
@@ -186,11 +188,11 @@ export class HooksManager {
           _metadata: {
             processedAt: new Date().toISOString(),
             sessionId: context.sessionId,
-            requestMethod: request.method
-          }
+            requestMethod: request.method,
+          },
         };
         return enrichedResponse;
-      }
+      },
     });
 
     // Error enrichment hook
@@ -208,25 +210,64 @@ export class HooksManager {
         (enrichedError as any).context = {
           method: request.method,
           sessionId: context.sessionId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
 
         return enrichedError;
-      }
+      },
     });
 
-    // Rate limiting hook (basic implementation)
+    // Rate limiting hook with sliding window implementation
     this.registerHook({
       name: 'rate-limiter',
       type: 'request',
       priority: 10, // High priority - run early
-      description: 'Basic rate limiting',
+      description: 'Sliding window rate limiting',
       execute: async (request, context) => {
-        // Simple implementation - could be enhanced with proper rate limiting
-        const key = `${context.sessionId}:${request.method}`;
-        logger.debug('Rate limit check', { key });
+        const rateLimitKey = `${context.sessionId}:${request.method}`;
+        const now = Date.now();
+        const windowMs = 60000; // 1 minute window
+        const maxRequests = 30; // Standard rate limit
+
+        if (!this.rateLimitWindows) {
+          this.rateLimitWindows = new Map();
+        }
+
+        let requestTimes = this.rateLimitWindows.get(rateLimitKey) || [];
+
+        // Remove requests older than window
+        requestTimes = requestTimes.filter((time) => now - time < windowMs);
+
+        // Check if limit exceeded
+        if (requestTimes.length >= maxRequests) {
+          const oldestRequest = Math.min(...requestTimes);
+          const retryAfter = Math.ceil((oldestRequest + windowMs - now) / 1000);
+
+          logger.warn('Rate limit exceeded', {
+            key: rateLimitKey,
+            requestCount: requestTimes.length,
+            maxRequests,
+            retryAfter,
+          });
+
+          throw new McpRateLimitError(
+            `Rate limit exceeded. Too many ${request.method} requests. Try again in ${retryAfter} seconds.`,
+            retryAfter,
+          );
+        }
+
+        // Add current request time
+        requestTimes.push(now);
+        this.rateLimitWindows.set(rateLimitKey, requestTimes);
+
+        logger.debug('Rate limit check passed', {
+          key: rateLimitKey,
+          currentCount: requestTimes.length,
+          maxRequests,
+        });
+
         return request;
-      }
+      },
     });
   }
 
@@ -234,11 +275,7 @@ export class HooksManager {
    * Get all registered hooks
    */
   getAllHooks(): Hook[] {
-    return [
-      ...this.requestHooks,
-      ...this.responseHooks,
-      ...this.errorHooks
-    ];
+    return [...this.requestHooks, ...this.responseHooks, ...this.errorHooks];
   }
 
   /**
@@ -246,7 +283,7 @@ export class HooksManager {
    */
   removeHook(name: string): boolean {
     const removeFromArray = (arr: Hook[]) => {
-      const index = arr.findIndex(hook => hook.name === name);
+      const index = arr.findIndex((hook) => hook.name === name);
       if (index !== -1) {
         arr.splice(index, 1);
         return true;
@@ -254,9 +291,11 @@ export class HooksManager {
       return false;
     };
 
-    return removeFromArray(this.requestHooks) ||
-           removeFromArray(this.responseHooks) ||
-           removeFromArray(this.errorHooks);
+    return (
+      removeFromArray(this.requestHooks) ||
+      removeFromArray(this.responseHooks) ||
+      removeFromArray(this.errorHooks)
+    );
   }
 }
 

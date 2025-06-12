@@ -147,7 +147,12 @@ function trimStringValue(value: unknown): string | undefined {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   }
-  return String(value);
+  // Only accept primitive types that can be meaningfully converted to strings
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  // Reject objects, arrays, functions, etc.
+  return undefined;
 }
 
 // Input types for validation

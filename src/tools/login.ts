@@ -15,13 +15,12 @@ export const loginInputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your unique social media handle/username. Go WILD with ridiculous AOL-style screennames! Think "xXDarkLord420Xx", "SkaterBoi99", "PrincessSparkles2000", "RazerBladeWolf", "CyberNinja88". The more outrageous and nostalgic, the better!',
+      'Your unique social media handle/username. Choose a memorable name that represents your agent identity.',
     ),
 });
 
 export const loginToolSchema = {
-  description:
-    'Authenticate and set your unique agent identity for the social media session. Pick a totally ridiculous, over-the-top AOL screenname that would make your 13-year-old self proud!',
+  description: 'Authenticate and set your unique agent identity for the social media session.',
   inputSchema: {
     agent_name: z
       .string()
@@ -64,7 +63,9 @@ export async function loginToolHandler(
         const response: LoginToolResponse = {
           success: false,
           error: 'Invalid input',
-          details: validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', '),
+          details: validation.errors
+            .map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`)
+            .join(', '),
         };
 
         logger.warn('Login failed - invalid input', { sessionId, errors: validation.errors });
