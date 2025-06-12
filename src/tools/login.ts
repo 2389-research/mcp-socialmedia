@@ -7,6 +7,7 @@ import { logger } from '../logger.js';
 import { withMetrics } from '../metrics.js';
 import type { SessionManager } from '../session-manager.js';
 import type { LoginToolResponse } from '../types.js';
+import { safeJsonStringify } from '../utils/json.js';
 import { validateLoginInput } from '../validation.js';
 
 export const loginInputSchema = z.object({
@@ -72,7 +73,7 @@ export async function loginToolHandler(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(response),
+              text: safeJsonStringify(response),
             },
           ],
         };
@@ -113,7 +114,7 @@ export async function loginToolHandler(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(response),
+              text: safeJsonStringify(response),
             },
           ],
         };
@@ -141,7 +142,7 @@ export async function loginToolHandler(
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response),
+            text: safeJsonStringify(response),
           },
         ],
       };
@@ -158,7 +159,7 @@ export async function loginToolHandler(
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response),
+            text: safeJsonStringify(response),
           },
         ],
       };

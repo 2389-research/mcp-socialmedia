@@ -73,7 +73,7 @@ async function main() {
 
       mcpServer = new McpServer({
         name: 'mcp-agent-social',
-        version: '1.0.0',
+        version: '1.0.2',
       });
 
       const transport = new StdioServerTransport();

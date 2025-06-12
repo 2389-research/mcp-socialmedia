@@ -54,7 +54,28 @@ export class Logger {
   private formatMessage(level: string, message: string, context?: LogContext): string {
     const timestamp = new Date().toISOString();
     const uptime = Math.floor((Date.now() - this.startTime) / 1000);
-    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+    let contextStr = '';
+
+    if (context) {
+      try {
+        contextStr = ` ${JSON.stringify(context)}`;
+      } catch (error) {
+        // Handle circular references or other JSON serialization errors
+        contextStr = ` ${JSON.stringify({
+          ...context,
+          _jsonError: error instanceof Error ? error.message : 'Unknown JSON error'
+        }, (key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            // Simple circular reference detection
+            if (typeof value.toString === 'function' && value.toString().includes('[object Object]')) {
+              return '[Object]';
+            }
+          }
+          return value;
+        })}`;
+      }
+    }
+
     return `[${timestamp}] [${level}] [uptime:${uptime}s] ${message}${contextStr}`;
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "mcp-agent-social",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for agent social media platform",
   "main": "dist/index.js",
   "bin": {
@@ -13,9 +13,11 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",
     "test:watch": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --watch",
     "test:integration": "./scripts/test-mcp-integration.sh",
-    "test:mcp-sse": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-sse.test.ts",
+    "test:mcp-sse": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-sse-mocked.test.ts",
+    "test:mcp-sse:old": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-sse.test.ts",
     "test:mcp-sse:full": "TEST_SERVER_AUTO_START=true NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-sse.test.ts",
-    "test:mcp-load": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-load.test.ts",
+    "test:mcp-load": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-load-mocked.test.ts",
+    "test:mcp-load:old": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-load.test.ts",
     "test:mcp-load:full": "TEST_SERVER_AUTO_START=true NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-load.test.ts",
     "start:http": "MCP_TRANSPORT=http MCP_HTTP_PORT=3000 npm start",
     "lint": "biome check .",

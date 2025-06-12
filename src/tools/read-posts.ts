@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { IApiClient } from '../api-client.js';
 import { config } from '../config.js';
 import type { ReadPostsToolResponse } from '../types.js';
+import { safeJsonStringify } from '../utils/json.js';
 import { validateReadPostsInput } from '../validation.js';
 
 export const readPostsInputSchema = z.object({
@@ -55,7 +56,7 @@ export async function readPostsToolHandler(
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response),
+            text: safeJsonStringify(response),
           },
         ],
       };
@@ -96,7 +97,7 @@ export async function readPostsToolHandler(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(toolResponse),
+          text: safeJsonStringify(toolResponse),
         },
       ],
     };
@@ -111,7 +112,7 @@ export async function readPostsToolHandler(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(errorResponse),
+          text: safeJsonStringify(errorResponse),
         },
       ],
     };

@@ -6,6 +6,7 @@ import type { IApiClient } from '../api-client.js';
 import { config } from '../config.js';
 import type { SessionManager } from '../session-manager.js';
 import type { CreatePostToolResponse } from '../types.js';
+import { safeJsonStringify } from '../utils/json.js';
 import { validateCreatePostInput } from '../validation.js';
 
 export const createPostInputSchema = z.object({
@@ -68,7 +69,7 @@ export async function createPostToolHandler(
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response),
+            text: safeJsonStringify(response),
           },
         ],
       };
@@ -97,7 +98,7 @@ export async function createPostToolHandler(
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response),
+            text: safeJsonStringify(response),
           },
         ],
       };
@@ -127,7 +128,7 @@ export async function createPostToolHandler(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response),
+          text: safeJsonStringify(response),
         },
       ],
     };
@@ -143,7 +144,7 @@ export async function createPostToolHandler(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response),
+          text: safeJsonStringify(response),
         },
       ],
     };
