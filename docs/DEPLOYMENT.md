@@ -92,7 +92,7 @@ version: '3.8'
 
 services:
   agent-social:
-    image: mcp-agent-social:1.0.0
+    image: mcp-agent-social:1.0.3
     restart: unless-stopped
     environment:
       TEAM_NAME: ${TEAM_NAME}
@@ -347,7 +347,7 @@ spec:
     spec:
       containers:
         - name: mcp-agent-social
-          image: mcp-agent-social:1.0.0
+          image: mcp-agent-social:1.0.3
           ports:
             - containerPort: 3000
           env:

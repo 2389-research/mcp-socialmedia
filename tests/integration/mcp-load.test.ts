@@ -49,7 +49,7 @@ class McpLoadTester {
     await this.makeRequest(sessionId, 'initialize', {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {}, resources: {}, prompts: {}, sampling: {} },
-      clientInfo: { name: 'load-tester', version: '1.0.0' }
+      clientInfo: { name: 'load-tester', version: '1.0.3' }
     });
   }
 

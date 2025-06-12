@@ -16,7 +16,7 @@ describe('MCP Agent Social Server', () => {
     // Create server
     server = new McpServer({
       name: 'mcp-agent-social',
-      version: '1.0.0',
+      version: '1.0.3',
     });
 
     // Register tools

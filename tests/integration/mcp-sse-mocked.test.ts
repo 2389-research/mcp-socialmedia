@@ -32,7 +32,7 @@ class MockedMcpClient {
               protocolVersion: '2024-11-05',
               serverInfo: {
                 name: 'mcp-agent-social',
-                version: '1.0.1'
+                version: '1.0.3'
               },
               capabilities: {
                 tools: {},
@@ -101,7 +101,7 @@ class MockedMcpClient {
       },
       clientInfo: {
         name: 'mcp-integration-test',
-        version: '1.0.0'
+        version: '1.0.3'
       }
     });
 

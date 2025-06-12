@@ -181,7 +181,7 @@ export class HttpMcpServer {
     // Create MCP server
     this.mcpServer = new McpServer({
       name: 'mcp-agent-social',
-      version: '1.0.0',
+      version: '1.0.3',
     });
 
     // Create HTTP transport

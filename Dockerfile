@@ -55,6 +55,6 @@ CMD ["node", "build/index.js"]
 
 # Metadata
 LABEL name="mcp-agent-social" \
-      version="1.0.0" \
+      version="1.0.3" \
       description="MCP Agent Social Media Server" \
       maintainer="your-team@company.com"

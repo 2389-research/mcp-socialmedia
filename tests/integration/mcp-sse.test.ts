@@ -112,7 +112,7 @@ class McpSseClient {
       },
       clientInfo: {
         name: 'mcp-integration-test',
-        version: '1.0.0'
+        version: '1.0.3'
       }
     });
 

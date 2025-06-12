@@ -25,7 +25,7 @@ class MockedMcpLoadTester {
           id: this.requestCount,
           result: {
             protocolVersion: '2024-11-05',
-            serverInfo: { name: 'mcp-agent-social', version: '1.0.1' },
+            serverInfo: { name: 'mcp-agent-social', version: '1.0.3' },
             capabilities: { tools: {}, resources: {}, sampling: {} }
           }
         };
@@ -64,7 +64,7 @@ class MockedMcpLoadTester {
     await this.makeRequest('initialize', {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {}, resources: {}, sampling: {} },
-      clientInfo: { name: 'load-tester', version: '1.0.0' }
+      clientInfo: { name: 'load-tester', version: '1.0.3' }
     });
   }
 

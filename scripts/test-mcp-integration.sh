@@ -107,7 +107,7 @@ TOTAL_TOOLS=$(curl -s -X POST "http://localhost:$HTTP_PORT/mcp" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "Mcp-Session-Id: summary-session" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' 2>/dev/null || echo "")
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.3"}}}' 2>/dev/null || echo "")
 
 if [ ! -z "$TOTAL_TOOLS" ]; then
     TOOLS_COUNT=$(curl -s -X POST "http://localhost:$HTTP_PORT/mcp" \
