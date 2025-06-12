@@ -61,10 +61,18 @@ export class Logger {
   private log(level: LogLevel, levelStr: string, message: string, context?: LogContext): void {
     if (level <= this.logLevel) {
       const formattedMessage = this.formatMessage(levelStr, message, context);
-      if (level === LogLevel.ERROR) {
-        console.error(formattedMessage);
-      } else {
-        console.log(formattedMessage);
+      try {
+        if (level === LogLevel.ERROR) {
+          console.error(formattedMessage);
+        } else {
+          console.log(formattedMessage);
+        }
+      } catch (error) {
+        // Ignore EPIPE errors - they happen when stdout is closed (e.g., when Claude Desktop disconnects)
+        if (error instanceof Error && 'code' in error && error.code !== 'EPIPE') {
+          // Only rethrow non-EPIPE errors
+          throw error;
+        }
       }
     }
   }
