@@ -175,13 +175,15 @@ export class HttpMcpServer {
     const { registerPrompts } = await import('./prompts/index.js');
     const { registerResources } = await import('./resources/index.js');
     const { registerRoots } = await import('./roots/index.js');
-    const { registerSampling } = await import('./sampling/index.js');
     const { registerTools } = await import('./tools/index.js');
+
+    // Import version from config
+    const { version } = await import('./config.js');
 
     // Create MCP server
     this.mcpServer = new McpServer({
       name: 'mcp-agent-social',
-      version: '1.0.3',
+      version,
     });
 
     // Create HTTP transport
@@ -194,11 +196,26 @@ export class HttpMcpServer {
     });
 
     // Register all capabilities
-    registerTools(this.mcpServer, { sessionManager: this.sessionManager, apiClient: this.apiClient, hooksManager });
-    registerResources(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerPrompts(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerSampling(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
-    registerRoots(this.mcpServer, { apiClient: this.apiClient, sessionManager: this.sessionManager, hooksManager });
+    registerTools(this.mcpServer, {
+      sessionManager: this.sessionManager,
+      apiClient: this.apiClient,
+      hooksManager,
+    });
+    registerResources(this.mcpServer, {
+      apiClient: this.apiClient,
+      sessionManager: this.sessionManager,
+      hooksManager,
+    });
+    registerPrompts(this.mcpServer, {
+      apiClient: this.apiClient,
+      sessionManager: this.sessionManager,
+      hooksManager,
+    });
+    registerRoots(this.mcpServer, {
+      apiClient: this.apiClient,
+      sessionManager: this.sessionManager,
+      hooksManager,
+    });
 
     // Connect transport
     await this.mcpServer.connect(this.transport);

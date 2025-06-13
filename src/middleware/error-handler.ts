@@ -3,6 +3,54 @@
 
 import { logger } from '../logger.js';
 
+// Custom error classes for better type safety
+export class McpValidationError extends Error {
+  constructor(
+    message: string,
+    public details?: any,
+  ) {
+    super(message);
+    this.name = 'McpValidationError';
+  }
+}
+
+export class McpAuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'McpAuthenticationError';
+  }
+}
+
+export class McpRateLimitError extends Error {
+  constructor(
+    message: string,
+    public retryAfter?: number,
+  ) {
+    super(message);
+    this.name = 'McpRateLimitError';
+  }
+}
+
+export class McpTimeoutError extends Error {
+  constructor(
+    message: string,
+    public timeout?: number,
+  ) {
+    super(message);
+    this.name = 'McpTimeoutError';
+  }
+}
+
+export class McpMethodNotFoundError extends Error {
+  constructor(
+    message: string,
+    public method?: string,
+  ) {
+    super(message);
+    this.name = 'McpMethodNotFoundError';
+  }
+}
+
 export interface ErrorContext {
   sessionId: string;
   requestId: string;
@@ -43,7 +91,7 @@ export class ErrorHandler {
       requestId: context.requestId,
       processingTime: Date.now() - context.startTime,
       originalError: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
 
     return enrichedError;
@@ -55,55 +103,55 @@ export class ErrorHandler {
   private createEnrichedError(error: any, request: any, context: ErrorContext): Error {
     let mcpError: McpError;
 
-    // Handle known error types
+    // Handle known error types using proper type checking
     if (error.code && typeof error.code === 'number') {
       // Already an MCP error
       mcpError = {
         code: error.code,
         message: error.message,
-        data: error.data
+        data: error.data,
       };
-    } else if (error.name === 'ValidationError' || error.message.includes('validation')) {
+    } else if (error instanceof McpValidationError) {
       mcpError = {
         code: -32602, // Invalid params
         message: 'Request validation failed',
         data: {
           originalMessage: error.message,
-          details: error.details || null
-        }
+          details: error.details,
+        },
       };
-    } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
+    } else if (error instanceof McpTimeoutError) {
       mcpError = {
         code: -32603, // Internal error
         message: 'Request timed out',
         data: {
-          timeout: error.data?.timeout,
-          method: context.method
-        }
+          timeout: error.timeout,
+          method: context.method,
+        },
       };
-    } else if (error.message.includes('not found') || error.message.includes('Not found')) {
+    } else if (error instanceof McpMethodNotFoundError) {
       mcpError = {
         code: -32601, // Method not found
         message: 'Method not found',
         data: {
-          method: request.method
-        }
+          method: error.method || request.method,
+        },
       };
-    } else if (error.message.includes('unauthorized') || error.message.includes('Unauthorized')) {
+    } else if (error instanceof McpAuthenticationError) {
       mcpError = {
         code: -32600, // Invalid request
         message: 'Unauthorized request',
         data: {
-          sessionId: context.sessionId
-        }
+          sessionId: context.sessionId,
+        },
       };
-    } else if (error.message.includes('rate limit') || error.message.includes('Too many requests')) {
+    } else if (error instanceof McpRateLimitError) {
       mcpError = {
         code: -32603, // Internal error
         message: 'Rate limit exceeded',
         data: {
-          retryAfter: error.retryAfter || 60
-        }
+          retryAfter: error.retryAfter || 60,
+        },
       };
     } else {
       // Generic internal error
@@ -112,8 +160,8 @@ export class ErrorHandler {
         message: 'Internal server error',
         data: {
           originalMessage: error.message,
-          type: error.constructor.name
-        }
+          type: error.constructor.name,
+        },
       };
     }
 
@@ -127,8 +175,8 @@ export class ErrorHandler {
         requestId: context.requestId,
         method: context.method,
         timestamp: new Date().toISOString(),
-        processingTime: Date.now() - context.startTime
-      }
+        processingTime: Date.now() - context.startTime,
+      },
     };
 
     return finalError;
@@ -141,7 +189,7 @@ export class ErrorHandler {
     return {
       code: error.code || -32603,
       message: error.message || 'Internal server error',
-      data: error.data || null
+      data: error.data || null,
     };
   }
 
@@ -154,7 +202,7 @@ export class ErrorHandler {
     const recoverableCodes = [
       -32602, // Invalid params - client can fix
       -32601, // Method not found - client can fix
-      -32600  // Invalid request - client can fix
+      -32600, // Invalid request - client can fix
     ];
 
     return recoverableCodes.includes(error.code);
@@ -169,7 +217,7 @@ export class ErrorHandler {
       errorsByType: Object.fromEntries(this.errorsByType),
       errorsByMethod: Object.fromEntries(this.errorsByMethod),
       mostCommonError: this.getMostCommonError(),
-      errorRate: this.errorCount // This would be divided by total requests in a real system
+      errorRate: this.errorCount, // This would be divided by total requests in a real system
     };
   }
 

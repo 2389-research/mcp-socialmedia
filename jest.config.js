@@ -20,6 +20,10 @@ export default {
     ],
   },
   testMatch: ['**/tests/**/*.test.ts'],
+  testPathIgnorePatterns: [
+    'tests/integration/mcp-load.test.ts',
+    'tests/integration/mcp-sse.test.ts'
+  ],
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

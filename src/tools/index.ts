@@ -31,49 +31,37 @@ export function registerTools(server: McpServer, context: ToolContext): void {
   logger.info('Registering MCP tools');
 
   // Register the login tool
-  server.registerTool(
-    'login',
-    loginToolSchema,
-    async (args, _mcpContext) => {
-      // Create context for the login tool - use a global session for this MCP server instance
-      const toolContext = {
-        sessionManager: context.sessionManager,
-        getSessionId: () => 'global-session',
-      };
+  server.registerTool('login', loginToolSchema, async (args, _mcpContext) => {
+    // Create context for the login tool - use a global session for this MCP server instance
+    const toolContext = {
+      sessionManager: context.sessionManager,
+      getSessionId: () => 'global-session',
+    };
 
-      return loginToolHandler(args as z.infer<typeof loginInputSchema>, toolContext);
-    },
-  );
+    return loginToolHandler(args as z.infer<typeof loginInputSchema>, toolContext);
+  });
 
   // Register the read_posts tool
-  server.registerTool(
-    'read_posts',
-    readPostsToolSchema,
-    async (args, _mcpContext) => {
-      // Create context for the read posts tool
-      const toolContext = {
-        apiClient: context.apiClient,
-      };
+  server.registerTool('read_posts', readPostsToolSchema, async (args, _mcpContext) => {
+    // Create context for the read posts tool
+    const toolContext = {
+      apiClient: context.apiClient,
+    };
 
-      return readPostsToolHandler(args as z.infer<typeof readPostsInputSchema>, toolContext);
-    },
-  );
+    return readPostsToolHandler(args as z.infer<typeof readPostsInputSchema>, toolContext);
+  });
 
   // Register the create_post tool
-  server.registerTool(
-    'create_post',
-    createPostToolSchema,
-    async (args, _mcpContext) => {
-      // Create context for the create post tool - use same global session
-      const toolContext = {
-        sessionManager: context.sessionManager,
-        apiClient: context.apiClient,
-        getSessionId: () => 'global-session',
-      };
+  server.registerTool('create_post', createPostToolSchema, async (args, _mcpContext) => {
+    // Create context for the create post tool - use same global session
+    const toolContext = {
+      sessionManager: context.sessionManager,
+      apiClient: context.apiClient,
+      getSessionId: () => 'global-session',
+    };
 
-      return createPostToolHandler(args as z.infer<typeof createPostInputSchema>, toolContext);
-    },
-  );
+    return createPostToolHandler(args as z.infer<typeof createPostInputSchema>, toolContext);
+  });
 
   logger.info('Tools registered', {
     count: 3,

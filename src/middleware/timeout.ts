@@ -2,6 +2,33 @@
 // ABOUTME: Prevents hanging requests and provides configurable timeout handling
 
 import { logger } from '../logger.js';
+import { McpTimeoutError } from './error-handler.js';
+
+// Simple async lock implementation for thread safety
+class AsyncLock {
+  private queue: Array<() => void> = [];
+  private locked = false;
+
+  async acquire(): Promise<() => void> {
+    return new Promise((resolve) => {
+      const unlock = () => {
+        this.locked = false;
+        const next = this.queue.shift();
+        if (next) {
+          this.locked = true;
+          next();
+        }
+      };
+
+      if (this.locked) {
+        this.queue.push(() => resolve(unlock));
+      } else {
+        this.locked = true;
+        resolve(unlock);
+      }
+    });
+  }
+}
 
 export interface TimeoutConfig {
   defaultTimeout: number;
@@ -13,6 +40,7 @@ export class TimeoutManager {
   private readonly config: TimeoutConfig;
   private timeoutCount = 0;
   private activeTimeouts = new Set<NodeJS.Timeout>();
+  private readonly timeoutLock = new AsyncLock();
 
   constructor(config?: Partial<TimeoutConfig>) {
     this.config = {
@@ -27,15 +55,15 @@ export class TimeoutManager {
         'prompts/list': 5000,
         'prompts/get': 10000,
         'roots/list': 5000,
-        ...config?.methodTimeouts
+        ...config?.methodTimeouts,
       },
-      ...config
+      ...config,
     };
 
     logger.info('Timeout manager initialized', {
       defaultTimeout: this.config.defaultTimeout,
       maxTimeout: this.config.maxTimeout,
-      methodTimeouts: Object.keys(this.config.methodTimeouts).length
+      methodTimeouts: Object.keys(this.config.methodTimeouts).length,
     });
   }
 
@@ -46,27 +74,27 @@ export class TimeoutManager {
     const timeoutMs = this.getTimeoutForMethod(method);
 
     return new Promise((_, reject) => {
-      const timeoutId = setTimeout(() => {
-        this.timeoutCount++;
-        this.activeTimeouts.delete(timeoutId);
+      const timeoutId = setTimeout(async () => {
+        // Use lock for thread-safe updates
+        const unlock = await this.timeoutLock.acquire();
+        try {
+          this.timeoutCount++;
+          this.activeTimeouts.delete(timeoutId);
+        } finally {
+          unlock();
+        }
 
         logger.warn('Request timed out', {
           method,
           timeout: timeoutMs,
-          totalTimeouts: this.timeoutCount
+          totalTimeouts: this.timeoutCount,
         });
 
-        const error = new Error(`Request timed out after ${timeoutMs}ms`);
-        (error as any).code = -32603; // Internal error
-        (error as any).data = {
-          timeout: timeoutMs,
-          method,
-          type: 'timeout'
-        };
-
+        const error = new McpTimeoutError(`Request timed out after ${timeoutMs}ms`, timeoutMs);
         reject(error);
       }, timeoutMs);
 
+      // Thread-safe addition to active timeouts
       this.activeTimeouts.add(timeoutId);
     });
   }
@@ -82,33 +110,38 @@ export class TimeoutManager {
     let timeoutId: NodeJS.Timeout;
 
     const promise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        this.timeoutCount++;
-        this.activeTimeouts.delete(timeoutId);
+      timeoutId = setTimeout(async () => {
+        // Use lock for thread-safe updates
+        const unlock = await this.timeoutLock.acquire();
+        try {
+          this.timeoutCount++;
+          this.activeTimeouts.delete(timeoutId);
+        } finally {
+          unlock();
+        }
 
         logger.warn('Request timed out', {
           method,
-          timeout: timeoutMs
+          timeout: timeoutMs,
         });
 
-        const error = new Error(`Request timed out after ${timeoutMs}ms`);
-        (error as any).code = -32603;
-        (error as any).data = {
-          timeout: timeoutMs,
-          method,
-          type: 'timeout'
-        };
-
+        const error = new McpTimeoutError(`Request timed out after ${timeoutMs}ms`, timeoutMs);
         reject(error);
       }, timeoutMs);
 
       this.activeTimeouts.add(timeoutId);
     });
 
-    const clear = () => {
+    const clear = async () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
-        this.activeTimeouts.delete(timeoutId);
+        // Use lock for thread-safe removal
+        const unlock = await this.timeoutLock.acquire();
+        try {
+          this.activeTimeouts.delete(timeoutId);
+        } finally {
+          unlock();
+        }
       }
     };
 
@@ -145,11 +178,16 @@ export class TimeoutManager {
   /**
    * Clear all active timeouts
    */
-  clearAllTimeouts(): void {
-    for (const timeoutId of this.activeTimeouts) {
-      clearTimeout(timeoutId);
+  async clearAllTimeouts(): Promise<void> {
+    const unlock = await this.timeoutLock.acquire();
+    try {
+      for (const timeoutId of this.activeTimeouts) {
+        clearTimeout(timeoutId);
+      }
+      this.activeTimeouts.clear();
+    } finally {
+      unlock();
     }
-    this.activeTimeouts.clear();
     logger.info('Cleared all active timeouts');
   }
 
@@ -163,8 +201,8 @@ export class TimeoutManager {
       config: {
         defaultTimeout: this.config.defaultTimeout,
         maxTimeout: this.config.maxTimeout,
-        methodTimeoutCount: Object.keys(this.config.methodTimeouts).length
-      }
+        methodTimeoutCount: Object.keys(this.config.methodTimeouts).length,
+      },
     };
   }
 

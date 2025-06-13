@@ -20,6 +20,9 @@ export interface Session {
   sessionId: string;
   agentName: string;
   loginTimestamp: Date;
+  lastActivity: Date;
+  expiresAt: Date;
+  isValid: boolean;
 }
 
 export interface Post {

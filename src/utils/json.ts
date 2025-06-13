@@ -13,7 +13,7 @@ export function safeJsonStringify(obj: any, replacer?: (key: string, value: any)
       return JSON.stringify({
         _error: 'JSON_SERIALIZATION_ERROR',
         _originalError: error instanceof Error ? error.message : String(error),
-        _fallback: String(obj)
+        _fallback: String(obj),
       });
     } catch {
       // Last resort - return a simple error object

@@ -4,15 +4,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ApiClient } from './api-client.js';
-import { config, validateConfig } from './config.js';
+import { ENV_KEYS, config, validateConfig, version } from './config.js';
+import { hooksManager } from './hooks/index.js';
 import { HttpMcpServer } from './http-server.js';
 import { logger } from './logger.js';
 import { metrics } from './metrics.js';
-import { hooksManager } from './hooks/index.js';
 import { registerPrompts } from './prompts/index.js';
 import { registerResources } from './resources/index.js';
 import { registerRoots } from './roots/index.js';
-import { registerSampling } from './sampling/index.js';
 import { SessionManager } from './session-manager.js';
 import { registerTools } from './tools/index.js';
 
@@ -35,7 +34,7 @@ async function main() {
       nodeVersion: process.version,
       platform: process.platform,
       pid: process.pid,
-      logLevel: process.env.LOG_LEVEL || 'INFO',
+      logLevel: process.env[ENV_KEYS.LOG_LEVEL] || 'INFO',
     });
 
     validateConfig();
@@ -50,20 +49,20 @@ async function main() {
     });
 
     // Determine transport mode
-    const transportMode = process.env.MCP_TRANSPORT || 'stdio';
+    const transportMode = process.env[ENV_KEYS.MCP_TRANSPORT] || 'stdio';
 
     if (transportMode === 'http') {
       // HTTP mode
-      const httpPort = Number.parseInt(process.env.MCP_HTTP_PORT || '3000', 10);
-      const httpHost = process.env.MCP_HTTP_HOST || 'localhost';
+      const httpPort = Number.parseInt(process.env[ENV_KEYS.MCP_HTTP_PORT] || '3000', 10);
+      const httpHost = process.env[ENV_KEYS.MCP_HTTP_HOST] || 'localhost';
 
       logger.info('Starting in HTTP mode', { port: httpPort, host: httpHost });
 
       httpServer = new HttpMcpServer(sessionManager, apiClient, {
         port: httpPort,
         host: httpHost,
-        enableJsonResponse: process.env.MCP_ENABLE_JSON === 'true',
-        corsOrigin: process.env.MCP_CORS_ORIGIN || '*',
+        enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
+        corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
       });
 
       await httpServer.start();
@@ -73,7 +72,7 @@ async function main() {
 
       mcpServer = new McpServer({
         name: 'mcp-agent-social',
-        version: '1.0.3',
+        version,
       });
 
       const transport = new StdioServerTransport();
@@ -82,7 +81,6 @@ async function main() {
       registerTools(mcpServer, { sessionManager, apiClient, hooksManager });
       registerResources(mcpServer, { apiClient, sessionManager, hooksManager });
       registerPrompts(mcpServer, { apiClient, sessionManager, hooksManager });
-      registerSampling(mcpServer, { apiClient, sessionManager, hooksManager });
       registerRoots(mcpServer, { apiClient, sessionManager, hooksManager });
 
       // Connect to transport
@@ -115,7 +113,6 @@ async function main() {
       toolsCount: 3,
       resourcesCount: 6,
       promptsCount: 8,
-      samplingEnabled: true,
       rootsEnabled: true,
       hooksCount: hooksManager.getAllHooks().length,
       transport: 'stdio',
