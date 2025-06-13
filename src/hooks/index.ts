@@ -223,6 +223,7 @@ export class HooksManager {
       type: 'request',
       priority: 10, // High priority - run early
       description: 'Sliding window rate limiting',
+      critical: true, // Rate limit errors should stop request processing
       execute: async (request, context) => {
         const rateLimitKey = `${context.sessionId}:${request.method}`;
         const now = Date.now();

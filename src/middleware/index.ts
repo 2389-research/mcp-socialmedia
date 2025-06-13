@@ -2,9 +2,9 @@
 // ABOUTME: Provides comprehensive request/response processing and error management
 
 import { logger } from '../logger.js';
-import { RequestValidator } from './validator.js';
 import { ErrorHandler } from './error-handler.js';
 import { TimeoutManager } from './timeout.js';
+import { RequestValidator } from './validator.js';
 
 export interface MiddlewareContext {
   sessionId: string;
@@ -42,13 +42,13 @@ export class ProtocolMiddleware {
       // 3. Process with timeout
       const processedRequest = await Promise.race([
         this.doProcessRequest(request, context),
-        timeoutPromise
+        timeoutPromise,
       ]);
 
       logger.debug('Request processed successfully', {
         method: context.method,
         sessionId: context.sessionId,
-        processingTime: Date.now() - startTime
+        processingTime: Date.now() - startTime,
       });
 
       return processedRequest;
@@ -70,7 +70,7 @@ export class ProtocolMiddleware {
       const enrichedResponse = {
         ...response,
         _processingTime: Date.now() - context.startTime,
-        _requestId: context.requestId
+        _requestId: context.requestId,
       };
 
       return enrichedResponse;
@@ -88,8 +88,8 @@ export class ProtocolMiddleware {
         requestId: context.requestId,
         sessionId: context.sessionId,
         timestamp: new Date().toISOString(),
-        processingStarted: context.startTime
-      }
+        processingStarted: context.startTime,
+      },
     };
 
     return enrichedRequest;
@@ -102,7 +102,7 @@ export class ProtocolMiddleware {
     return {
       validator: this.validator.getStats(),
       errorHandler: this.errorHandler.getStats(),
-      timeoutManager: this.timeoutManager.getStats()
+      timeoutManager: this.timeoutManager.getStats(),
     };
   }
 }

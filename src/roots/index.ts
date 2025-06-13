@@ -1,9 +1,9 @@
 // ABOUTME: MCP Roots implementation for workspace boundaries and operational limits
 // ABOUTME: Defines and enforces multi-tenant configuration and access controls
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '../logger.js';
-import { RootDefinition, RootLimits } from './types.js';
+import { type RootDefinition, RootLimits } from './types.js';
 
 interface RootsContext {
   apiClient: any;
@@ -36,7 +36,7 @@ export class RootsManager {
         canAccessAgentProfiles: true,
         canUsePrompts: true,
         canUseSampling: true,
-      }
+      },
     };
 
     this.roots.set(defaultRoot.uri, defaultRoot);
@@ -137,24 +137,28 @@ export function registerRoots(server: McpServer, context: RootsContext) {
           contents: [
             {
               uri: 'social://roots',
-              text: JSON.stringify({
-                roots: roots.map(root => ({
-                  uri: root.uri,
-                  name: root.name,
-                  description: root.description
-                }))
-              }, null, 2),
-              mimeType: 'application/json'
-            }
-          ]
+              text: JSON.stringify(
+                {
+                  roots: roots.map((root) => ({
+                    uri: root.uri,
+                    name: root.name,
+                    description: root.description,
+                  })),
+                },
+                null,
+                2,
+              ),
+              mimeType: 'application/json',
+            },
+          ],
         };
       } catch (error) {
         logger.error('Error in roots resource', {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
         throw error;
       }
-    }
+    },
   );
 
   logger.info('Roots resource registered');
