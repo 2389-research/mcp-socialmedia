@@ -229,4 +229,41 @@ describe('SessionManager', () => {
       expect(sessionManager.getAllSessions()).toEqual([]);
     });
   });
+
+  describe('lock timeout handling', () => {
+    it('should timeout lock acquisition after specified timeout', async () => {
+      // Create a session manager with a shorter timeout for testing (1 second)
+      const sessionManager = new SessionManager(1000);
+
+      // Mock the sessionLock to simulate a lock that never releases
+      (sessionManager as any).sessionLock = new Promise(() => {}); // Never resolves
+
+      // This should timeout and fallback to non-locking operation
+      const session = await sessionManager.createSession('test-session', 'test-agent');
+
+      // Since it should fallback, the session should still be created successfully
+      expect(session).toBeDefined();
+      expect(session.sessionId).toBe('test-session');
+      expect(session.agentName).toBe('test-agent');
+    }, 10000); // Set jest timeout to 10 seconds for this test
+
+    it('should fallback to non-locking operations when lock fails', async () => {
+      // Create a session manager
+      const sessionManager = new SessionManager();
+
+      // Mock the acquireLock method to throw an error
+      const originalAcquireLock = (sessionManager as any).acquireLock;
+      (sessionManager as any).acquireLock = jest.fn().mockRejectedValue(new Error('Lock acquisition failed'));
+
+      // This should fallback to non-locking operation
+      const session = await sessionManager.createSession('test-session', 'test-agent');
+
+      expect(session).toBeDefined();
+      expect(session.sessionId).toBe('test-session');
+      expect(session.agentName).toBe('test-agent');
+
+      // Restore original method
+      (sessionManager as any).acquireLock = originalAcquireLock;
+    });
+  });
 });
