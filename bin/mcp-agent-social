@@ -14,17 +14,17 @@ const distPath = join(__dirname, '..', 'dist', 'index.js');
 
 // Check if built files exist, if not, try to build them
 if (!existsSync(distPath)) {
-  console.log('Building project...');
+  process.stderr.write('Building project...\n');
   try {
     execSync('npm run build', { cwd: join(__dirname, '..'), stdio: 'inherit' });
   } catch (error) {
-    console.error('Failed to build project. Please run "npm run build" manually.');
+    process.stderr.write('Failed to build project. Please run "npm run build" manually.\n');
     process.exit(1);
   }
 }
 
 // Now import the main module
 import('../dist/index.js').catch((error) => {
-  console.error('Failed to start MCP Agent Social Server:', error.message);
+  process.stderr.write(`Failed to start MCP Agent Social Server: ${error.message}\n`);
   process.exit(1);
 });

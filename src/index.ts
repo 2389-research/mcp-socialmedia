@@ -194,6 +194,7 @@ async function shutdown(signal: string) {
 }
 
 main().catch((error) => {
-  console.error('Unhandled error:', error);
+  // Write to stderr to avoid polluting JSON-RPC stream in stdio mode
+  process.stderr.write(`Unhandled error: ${error}\n`);
   process.exit(1);
 });

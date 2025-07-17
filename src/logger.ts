@@ -23,10 +23,12 @@ export class Logger {
   private static instance: Logger;
   private logLevel: LogLevel;
   private startTime: number;
+  private isStdioMode: boolean;
 
   private constructor() {
     this.logLevel = this.parseLogLevel(process.env[ENV_KEYS.LOG_LEVEL] || 'INFO');
     this.startTime = Date.now();
+    this.isStdioMode = process.env[ENV_KEYS.MCP_TRANSPORT] !== 'http';
   }
 
   static getInstance(): Logger {
@@ -68,7 +70,7 @@ export class Logger {
             ...context,
             _jsonError: error instanceof Error ? error.message : 'Unknown JSON error',
           },
-          (key, value) => {
+          (_key, value) => {
             if (typeof value === 'object' && value !== null) {
               // Simple circular reference detection
               if (
@@ -91,10 +93,16 @@ export class Logger {
     if (level <= this.logLevel) {
       const formattedMessage = this.formatMessage(levelStr, message, context);
       try {
-        if (level === LogLevel.ERROR) {
-          console.error(formattedMessage);
+        if (this.isStdioMode) {
+          // In stdio mode, write to stderr to avoid polluting JSON-RPC stream
+          process.stderr.write(`${formattedMessage}\n`);
         } else {
-          console.log(formattedMessage);
+          // In HTTP mode, use console logging
+          if (level === LogLevel.ERROR) {
+            console.error(formattedMessage);
+          } else {
+            console.log(formattedMessage);
+          }
         }
       } catch (error) {
         // Ignore EPIPE errors - they happen when stdout is closed (e.g., when Claude Desktop disconnects)
