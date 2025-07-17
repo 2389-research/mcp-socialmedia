@@ -35,3 +35,7 @@ coverage/
 tmp/
 temp/
 output.txt
+
+# Claude Code files
+.claude/
+.private-journal/
