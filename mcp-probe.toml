@@ -1,0 +1,44 @@
+# MCP Probe Configuration (Full)
+
+[transport]
+type = "stdio"
+command = "npm"
+args = ["run", "dev"]
+timeout = "30s"
+
+[transport.environment]
+PYTHONPATH = "/usr/local/lib/python3.9/site-packages"
+SOCIALMEDIA_TEAM_ID = "my-team"
+
+# External API configuration (required)
+# Base URL for the social media API
+SOCIALMEDIA_API_BASE_URL = "https://api.social.example.com"
+
+# API authentication key (required)
+# Keep this secret! Never commit to version control
+SOCIALMEDIA_API_KEY = "your-secret-api-key-here"
+
+[client]
+name = "mcp-probe"
+version = "0.1.0"
+
+[capabilities]
+tools = true
+resources = true
+prompts = true
+logging = true
+
+[timeouts]
+connection = "30s"
+request = "10s"
+initialization = "60s"
+
+[debug]
+show_raw_messages = false
+save_session = true
+session_dir = "./sessions"
+
+[logging]
+level = "info"
+format = "pretty"
+file = "mcp-probe.log"

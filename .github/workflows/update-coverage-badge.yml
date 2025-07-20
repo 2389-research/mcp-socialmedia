@@ -1,0 +1,82 @@
+name: Update Coverage Badge
+
+on:
+  push:
+    branches: [ main, missing-tests ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  update-coverage-badge:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests with coverage
+      run: npm test -- --coverage --silent
+
+    - name: Extract coverage percentage
+      id: coverage
+      run: |
+        COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+        echo "COVERAGE=$COVERAGE" >> $GITHUB_OUTPUT
+        echo "Coverage: $COVERAGE%"
+
+    - name: Update README badge
+      run: |
+        COVERAGE=${{ steps.coverage.outputs.COVERAGE }}
+        COLOR="red"
+        if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+          COLOR="brightgreen"
+        elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+          COLOR="yellow"
+        elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+          COLOR="orange"
+        fi
+
+        # Update the README.md file with new coverage
+        sed -i "s|coverage-[0-9.]*%25-[a-z]*|coverage-${COVERAGE}%25-${COLOR}|g" README.md
+
+    - name: Commit updated badge (if on main branch)
+      if: github.ref == 'refs/heads/main'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add README.md
+        git diff --staged --quiet || git commit -m "chore: update coverage badge to ${{ steps.coverage.outputs.COVERAGE }}%"
+        git push
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const coverage = '${{ steps.coverage.outputs.COVERAGE }}';
+          const body = `## 📊 Test Coverage Report
+
+          **Overall Coverage: ${coverage}%**
+
+          Coverage details can be found in the [coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });

@@ -1,0 +1,42 @@
+name: Test Coverage Badge
+
+on:
+  push:
+    branches: [ main, missing-tests ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test -- --coverage
+
+    - name: Jest Coverage Comment
+      id: coverage
+      uses: MishaKav/jest-coverage-comment@main
+      with:
+        coverage-summary-path: coverage/coverage-summary.json
+        title: Test Coverage Report
+        summary-title: Coverage Summary
+        badge-title: Coverage
+        hide-comment: false
+        create-new-comment: false
+        hide-summary: false
+        junitxml-title: Test Results
+        junitxml-path: coverage/junit.xml
