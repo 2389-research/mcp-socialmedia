@@ -3,10 +3,10 @@
 
 import { jest } from '@jest/globals';
 
-import { MetricsCollector, metrics, withMetrics, type OperationMetrics } from '../src/metrics.js';
+import { MetricsCollector, type OperationMetrics, metrics, withMetrics } from '../src/metrics.js';
 
 // Helper function to sleep
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('MetricsCollector', () => {
   let metricsCollector: MetricsCollector;
@@ -113,15 +113,17 @@ describe('MetricsCollector', () => {
     });
 
     it('should track concurrent operations', async () => {
-      const ops = Array(5).fill(0).map((_, i) =>
-        metricsCollector.startOperation(`concurrent-test-${i}`)
-      );
+      const ops = Array(5)
+        .fill(0)
+        .map((_, i) => metricsCollector.startOperation(`concurrent-test-${i}`));
 
       // End them all after different delays
-      await Promise.all(ops.map(async (opId, i) => {
-        await sleep(20 + i * 10);
-        metricsCollector.endOperation(opId, true);
-      }));
+      await Promise.all(
+        ops.map(async (opId, i) => {
+          await sleep(20 + i * 10);
+          metricsCollector.endOperation(opId, true);
+        }),
+      );
 
       // Each should have its own metrics
       for (let i = 0; i < 5; i++) {
@@ -326,15 +328,11 @@ describe('MetricsCollector', () => {
     it('should clean up stale operations after timeout', async () => {
       // Create a collector with very short timeout for testing
       const testCollector = new (class extends MetricsCollector {
-        constructor() {
-          super();
-        }
-
         // Override the cleanup timeout for testing
         public testCleanupStaleOperations() {
           // Use reflection to access private method
-          (this as any).OPERATION_TIMEOUT = 50; // Very short timeout
-          (this as any).cleanupStaleOperations();
+          (this as unknown as { OPERATION_TIMEOUT: number }).OPERATION_TIMEOUT = 50; // Very short timeout
+          (this as unknown as { cleanupStaleOperations: () => void }).cleanupStaleOperations();
         }
       })();
 
@@ -423,10 +421,12 @@ describe('withMetrics helper', () => {
   });
 
   it('should track failed async operations', async () => {
-    await expect(withMetrics('helper-error-test', async () => {
-      await sleep(30);
-      throw new Error('Test error');
-    })).rejects.toThrow('Test error');
+    await expect(
+      withMetrics('helper-error-test', async () => {
+        await sleep(30);
+        throw new Error('Test error');
+      }),
+    ).rejects.toThrow('Test error');
 
     const operationMetrics = metrics.getOperationMetrics('helper-error-test');
     expect(operationMetrics?.count).toBe(1);
@@ -435,9 +435,11 @@ describe('withMetrics helper', () => {
   });
 
   it('should handle promise rejection correctly', async () => {
-    await expect(withMetrics('helper-rejection-test', async () => {
-      return Promise.reject('Rejection reason');
-    })).rejects.toBe('Rejection reason');
+    await expect(
+      withMetrics('helper-rejection-test', async () => {
+        return Promise.reject('Rejection reason');
+      }),
+    ).rejects.toBe('Rejection reason');
 
     const operationMetrics = metrics.getOperationMetrics('helper-rejection-test');
     expect(operationMetrics?.count).toBe(1);
@@ -445,12 +447,14 @@ describe('withMetrics helper', () => {
   });
 
   it('should track multiple concurrent operations', async () => {
-    const promises = Array(3).fill(0).map(async (_, i) => {
-      return withMetrics(`concurrent-helper-${i}`, async () => {
-        await sleep(50 + i * 20);
-        return `result-${i}`;
+    const promises = Array(3)
+      .fill(0)
+      .map(async (_, i) => {
+        return withMetrics(`concurrent-helper-${i}`, async () => {
+          await sleep(50 + i * 20);
+          return `result-${i}`;
+        });
       });
-    });
 
     const results = await Promise.all(promises);
 

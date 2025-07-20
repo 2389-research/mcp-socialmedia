@@ -1,7 +1,7 @@
 // ABOUTME: Comprehensive MCP SSE/HTTP integration test suite with mocked server responses
 // ABOUTME: Tests all transport modes, protocols, and newly implemented features using mocks
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 interface TestSession {
   sessionId: string;
@@ -14,11 +14,15 @@ class MockedMcpClient {
   constructor() {
     this.session = {
       sessionId: `test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      initialized: false
+      initialized: false,
     };
   }
 
-  async makeRequest(method: string, params: any = {}, id: number = 1): Promise<any> {
+  async makeRequest(
+    method: string,
+    _params: Record<string, unknown> = {},
+    id = 1,
+  ): Promise<unknown> {
     // Mock different responses based on method
     switch (method) {
       case 'initialize':
@@ -32,16 +36,16 @@ class MockedMcpClient {
               protocolVersion: '2024-11-05',
               serverInfo: {
                 name: 'mcp-agent-social',
-                version: '1.0.3'
+                version: '1.0.3',
               },
               capabilities: {
                 tools: {},
                 resources: {},
                 prompts: {},
-                sampling: {}
-              }
-            }
-          }
+                sampling: {},
+              },
+            },
+          },
         };
 
       case 'tools/list':
@@ -59,10 +63,10 @@ class MockedMcpClient {
                 { name: 'login', description: 'Authenticate with social media platform' },
                 { name: 'create_post', description: 'Create a new post' },
                 { name: 'read_posts', description: 'Read posts from feed' },
-                { name: 'sampling_create', description: 'Create sampling request' }
-              ]
-            }
-          }
+                { name: 'sampling_create', description: 'Create sampling request' },
+              ],
+            },
+          },
         };
 
       case 'resources/list':
@@ -77,12 +81,20 @@ class MockedMcpClient {
             id,
             result: {
               resources: [
-                { uri: 'social://feed', name: 'Social Feed', description: 'Main social media feed' },
-                { uri: 'social://notifications', name: 'Notifications', description: 'User notifications' },
-                { uri: 'social://roots', name: 'Roots', description: 'Root resources' }
-              ]
-            }
-          }
+                {
+                  uri: 'social://feed',
+                  name: 'Social Feed',
+                  description: 'Main social media feed',
+                },
+                {
+                  uri: 'social://notifications',
+                  name: 'Notifications',
+                  description: 'User notifications',
+                },
+                { uri: 'social://roots', name: 'Roots', description: 'Root resources' },
+              ],
+            },
+          },
         };
 
       default:
@@ -97,12 +109,12 @@ class MockedMcpClient {
         tools: {},
         resources: {},
         prompts: {},
-        sampling: {}
+        sampling: {},
       },
       clientInfo: {
         name: 'mcp-integration-test',
-        version: '1.0.3'
-      }
+        version: '1.0.3',
+      },
     });
 
     expect(response.status).toBe(200);
@@ -135,14 +147,14 @@ describe('MCP SSE Integration Tests (Mocked)', () => {
   describe('Protocol Initialization', () => {
     test('should initialize MCP connection successfully', async () => {
       await client.initialize();
-      expect(client['session'].initialized).toBe(true);
+      expect(client.session.initialized).toBe(true);
     });
 
     test('should fail requests before initialization', async () => {
       const uninitializedClient = new MockedMcpClient();
-      await expect(
-        uninitializedClient.makeRequest('tools/list')
-      ).rejects.toThrow('Session not initialized');
+      await expect(uninitializedClient.makeRequest('tools/list')).rejects.toThrow(
+        'Session not initialized',
+      );
     });
   });
 
@@ -162,7 +174,7 @@ describe('MCP SSE Integration Tests (Mocked)', () => {
       expect(response.data.result.tools).toBeDefined();
       expect(Array.isArray(response.data.result.tools)).toBe(true);
 
-      const toolNames = response.data.result.tools.map((t: any) => t.name);
+      const toolNames = response.data.result.tools.map((t: { name: string }) => t.name);
       expect(toolNames).toContain('login');
       expect(toolNames).toContain('create_post');
       expect(toolNames).toContain('read_posts');
@@ -179,7 +191,7 @@ describe('MCP SSE Integration Tests (Mocked)', () => {
       expect(response.data.result.resources).toBeDefined();
       expect(Array.isArray(response.data.result.resources)).toBe(true);
 
-      const resourceUris = response.data.result.resources.map((r: any) => r.uri);
+      const resourceUris = response.data.result.resources.map((r: { uri: string }) => r.uri);
       expect(resourceUris).toContain('social://feed');
       expect(resourceUris).toContain('social://notifications');
       expect(resourceUris).toContain('social://roots');

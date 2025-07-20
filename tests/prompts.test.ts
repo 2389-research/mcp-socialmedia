@@ -20,19 +20,34 @@ jest.mock('../src/config.js', () => ({
   },
 }));
 
-import { registerPrompts, listPrompts, getPrompt, type PromptContext } from '../src/prompts/index.js';
-import type { IApiClient } from '../src/api-client.js';
-import type { SessionManager } from '../src/session-manager.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
-import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
+import type { IApiClient } from '../src/api-client.js';
+import {
+  type PromptContext,
+  getPrompt,
+  listPrompts,
+  registerPrompts,
+} from '../src/prompts/index.js';
+import type { SessionManager } from '../src/session-manager.js';
+
+// Test type interfaces
+interface MockHooksManager {
+  executeRequestHooks: jest.MockedFunction<(...args: any[]) => any>;
+  executeResponseHooks: jest.MockedFunction<(...args: any[]) => any>;
+}
+
+interface MockServer {
+  prompt: jest.MockedFunction<(...args: any[]) => any>;
+}
 
 describe('Prompt Handlers', () => {
   let mockApiClient: jest.Mocked<IApiClient>;
   let mockSessionManager: jest.Mocked<SessionManager>;
-  let mockHooksManager: any;
+  let mockHooksManager: MockHooksManager;
   let mockContext: PromptContext;
   let mockExtra: RequestHandlerExtra<ServerRequest, ServerNotification>;
-  let mockServer: any;
+  let mockServer: MockServer;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -41,18 +56,20 @@ describe('Prompt Handlers', () => {
       fetchPosts: jest.fn(),
       createPost: jest.fn(),
       deletePost: jest.fn(),
-    } as any;
+    } as jest.Mocked<IApiClient>;
 
     mockSessionManager = {
       getSession: jest.fn(),
       createSession: jest.fn(),
       destroySession: jest.fn(),
-    } as any;
+    } as jest.Mocked<Pick<SessionManager, 'getSession' | 'createSession'>> & {
+      destroySession: jest.MockedFunction<(...args: any[]) => any>;
+    };
 
     mockHooksManager = {
       executeRequestHooks: jest.fn(),
       executeResponseHooks: jest.fn(),
-    };
+    } as MockHooksManager;
 
     mockContext = {
       apiClient: mockApiClient,
@@ -62,11 +79,11 @@ describe('Prompt Handlers', () => {
 
     mockExtra = {
       signal: new AbortController().signal,
-    } as any;
+    } as RequestHandlerExtra<ServerRequest, ServerNotification>;
 
     mockServer = {
       prompt: jest.fn(),
-    };
+    } as MockServer;
 
     // Default session mock
     mockSessionManager.getSession.mockReturnValue({
@@ -100,7 +117,7 @@ describe('Prompt Handlers', () => {
 
       // Verify some key prompts are registered
       const calls = mockServer.prompt.mock.calls;
-      const promptNames = calls.map(call => call[0]);
+      const promptNames = calls.map((call) => call[0]);
 
       expect(promptNames).toContain('summarize-thread');
       expect(promptNames).toContain('draft-reply');
@@ -134,7 +151,7 @@ describe('Prompt Handlers', () => {
 
       expect(result.prompts).toHaveLength(8);
 
-      const promptNames = result.prompts.map(p => p.name);
+      const promptNames = result.prompts.map((p) => p.name);
       expect(promptNames).toContain('summarize-thread');
       expect(promptNames).toContain('draft-reply');
       expect(promptNames).toContain('analyze-sentiment');
@@ -143,7 +160,7 @@ describe('Prompt Handlers', () => {
     it('should include prompt descriptions and arguments', async () => {
       const result = await listPrompts();
 
-      const draftReplyPrompt = result.prompts.find(p => p.name === 'draft-reply');
+      const draftReplyPrompt = result.prompts.find((p) => p.name === 'draft-reply');
       expect(draftReplyPrompt).toBeDefined();
       expect(draftReplyPrompt?.description).toBeDefined();
       expect(draftReplyPrompt?.arguments).toBeDefined();
@@ -153,12 +170,12 @@ describe('Prompt Handlers', () => {
     it('should mark required and optional arguments correctly', async () => {
       const result = await listPrompts();
 
-      const draftReplyPrompt = result.prompts.find(p => p.name === 'draft-reply');
+      const draftReplyPrompt = result.prompts.find((p) => p.name === 'draft-reply');
       const args = draftReplyPrompt?.arguments || [];
 
       // post_id should be required, tone should be optional
-      const postIdArg = args.find(arg => arg.name === 'post_id');
-      const toneArg = args.find(arg => arg.name === 'tone');
+      const postIdArg = args.find((arg) => arg.name === 'post_id');
+      const toneArg = args.find((arg) => arg.name === 'tone');
 
       expect(postIdArg?.required).toBe(true);
       expect(toneArg?.required).toBe(false);
@@ -173,7 +190,7 @@ describe('Prompt Handlers', () => {
 
     it('should throw error when called without extra parameter', async () => {
       await expect(getPrompt('draft-reply', {}, mockContext)).rejects.toThrow(
-        'getPrompt requires RequestHandlerExtra parameter'
+        'getPrompt requires RequestHandlerExtra parameter',
       );
     });
 
@@ -182,7 +199,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -196,7 +213,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123', tone: 'friendly' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -213,7 +230,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'non-existent' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -225,7 +242,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -239,7 +256,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -253,7 +270,7 @@ describe('Prompt Handlers', () => {
         'generate-hashtags',
         { content: 'Just shipped a new feature for our app!' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -266,10 +283,10 @@ describe('Prompt Handlers', () => {
         'generate-hashtags',
         {
           content: 'Test content',
-          max_count: '3'
+          max_count: '3',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -281,10 +298,10 @@ describe('Prompt Handlers', () => {
         'generate-hashtags',
         {
           content: 'Tech tutorial',
-          target_audience: 'developers'
+          target_audience: 'developers',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -298,7 +315,7 @@ describe('Prompt Handlers', () => {
         'create-engagement-post',
         { topic: 'artificial intelligence' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -311,10 +328,10 @@ describe('Prompt Handlers', () => {
         'create-engagement-post',
         {
           topic: 'productivity',
-          post_type: 'question'
+          post_type: 'question',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -328,7 +345,7 @@ describe('Prompt Handlers', () => {
         'summarize-thread',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -343,7 +360,7 @@ describe('Prompt Handlers', () => {
         'summarize-thread',
         { post_id: 'non-existent' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -357,7 +374,7 @@ describe('Prompt Handlers', () => {
         'summarize-agent-activity',
         { agent_name: 'test-agent' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -371,10 +388,10 @@ describe('Prompt Handlers', () => {
         'summarize-agent-activity',
         {
           agent_name: 'test-agent',
-          timeframe: '30 days'
+          timeframe: '30 days',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -388,7 +405,7 @@ describe('Prompt Handlers', () => {
         'analyze-sentiment',
         { content: 'This is amazing! I love it!' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -401,10 +418,10 @@ describe('Prompt Handlers', () => {
         'analyze-sentiment',
         {
           content: 'Mixed feelings about this',
-          analysis_type: 'detailed'
+          analysis_type: 'detailed',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -418,7 +435,7 @@ describe('Prompt Handlers', () => {
         'find-related-discussions',
         { topic: 'machine learning' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -431,10 +448,10 @@ describe('Prompt Handlers', () => {
         'find-related-discussions',
         {
           topic: 'AI',
-          search_depth: 'deep'
+          search_depth: 'deep',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -444,12 +461,7 @@ describe('Prompt Handlers', () => {
 
   describe('Generate Engagement Report Prompt', () => {
     it('should generate engagement report with default timeframe', async () => {
-      const result = await getPrompt(
-        'generate-engagement-report',
-        {},
-        mockContext,
-        mockExtra
-      );
+      const result = await getPrompt('generate-engagement-report', {}, mockContext, mockExtra);
 
       expect(result).toBeDefined();
       expect(result?.messages[0].content.text).toContain('engagement report');
@@ -461,10 +473,10 @@ describe('Prompt Handlers', () => {
         'generate-engagement-report',
         {
           timeframe: '30 days',
-          metrics: 'posts,replies,sentiment'
+          metrics: 'posts,replies,sentiment',
         },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -481,7 +493,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -498,7 +510,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -507,9 +519,9 @@ describe('Prompt Handlers', () => {
     it('should handle malformed arguments gracefully', async () => {
       const result = await getPrompt(
         'generate-hashtags',
-        { content: null } as any, // Invalid content
+        { content: null as unknown as string }, // Invalid content
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -531,7 +543,7 @@ describe('Prompt Handlers', () => {
         'draft-reply',
         { post_id: 'post-123' },
         mockContext,
-        mockExtra
+        mockExtra,
       );
 
       expect(result).toBeDefined();
@@ -548,10 +560,10 @@ describe('Prompt Handlers', () => {
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(3);
-      results.forEach(result => {
+      for (const result of results) {
         expect(result).toBeDefined();
         expect(result?.messages).toBeDefined();
-      });
+      }
     });
 
     it('should maintain context isolation between prompts', async () => {
@@ -560,8 +572,8 @@ describe('Prompt Handlers', () => {
         ...mockContext,
         sessionManager: {
           ...mockSessionManager,
-          getSession: jest.fn().mockReturnValue({ agentName: 'different-agent' })
-        }
+          getSession: jest.fn().mockReturnValue({ agentName: 'different-agent' }),
+        },
       };
 
       const result1 = await getPrompt('draft-reply', { post_id: 'post-123' }, context1, mockExtra);

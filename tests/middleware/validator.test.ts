@@ -41,7 +41,9 @@ describe('RequestValidator', () => {
           method: 'tools/list',
         };
 
-        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow('Request validation failed');
+        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow(
+          'Request validation failed',
+        );
       });
 
       it('should reject request with wrong jsonrpc version', async () => {
@@ -51,7 +53,9 @@ describe('RequestValidator', () => {
           method: 'tools/list',
         };
 
-        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow('Request validation failed');
+        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow(
+          'Request validation failed',
+        );
       });
 
       it('should reject request without method', async () => {
@@ -60,7 +64,9 @@ describe('RequestValidator', () => {
           id: 1,
         };
 
-        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow('Request validation failed');
+        await expect(validator.validateRequest(invalidRequest)).rejects.toThrow(
+          'Request validation failed',
+        );
       });
 
       it('should accept null id', async () => {
@@ -156,7 +162,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateRequest(request)).rejects.toThrow('Request validation failed');
+          await expect(validator.validateRequest(request)).rejects.toThrow(
+            'Request validation failed',
+          );
         });
       });
 
@@ -192,7 +200,9 @@ describe('RequestValidator', () => {
           method: 'unknown/method',
         };
 
-        await expect(validator.validateRequest(request)).rejects.toThrow('Method not found: unknown/method');
+        await expect(validator.validateRequest(request)).rejects.toThrow(
+          'Method not found: unknown/method',
+        );
       });
     });
 
@@ -209,7 +219,9 @@ describe('RequestValidator', () => {
           params: largeParams,
         };
 
-        await expect(validator.validateRequest(request)).rejects.toThrow('Request payload exceeds maximum size limit');
+        await expect(validator.validateRequest(request)).rejects.toThrow(
+          'Request payload exceeds maximum size limit',
+        );
       });
 
       it('should allow content within size limits', async () => {
@@ -273,7 +285,9 @@ describe('RequestValidator', () => {
           method: 'malicious/method',
         };
 
-        await expect(validator.validateRequest(request)).rejects.toThrow('Method not found: malicious/method');
+        await expect(validator.validateRequest(request)).rejects.toThrow(
+          'Method not found: malicious/method',
+        );
       });
 
       describe('sampling/create validation', () => {
@@ -283,10 +297,7 @@ describe('RequestValidator', () => {
             id: 1,
             method: 'sampling/create',
             params: {
-              messages: [
-                { content: 'Hello' },
-                { content: 'World' },
-              ],
+              messages: [{ content: 'Hello' }, { content: 'World' }],
             },
           };
 
@@ -303,7 +314,9 @@ describe('RequestValidator', () => {
             params: { messages },
           };
 
-          await expect(validator.validateRequest(request)).rejects.toThrow('Too many messages in sampling request (max 50)');
+          await expect(validator.validateRequest(request)).rejects.toThrow(
+            'Too many messages in sampling request (max 50)',
+          );
         });
 
         it('should reject sampling request with message content too long', async () => {
@@ -318,7 +331,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateRequest(request)).rejects.toThrow('Message content exceeds maximum length (10000 characters)');
+          await expect(validator.validateRequest(request)).rejects.toThrow(
+            'Message content exceeds maximum length (10000 characters)',
+          );
         });
 
         it('should allow sampling request at message limits', async () => {
@@ -347,10 +362,11 @@ describe('RequestValidator', () => {
 
         try {
           await validator.validateRequest(request);
-        } catch (error: any) {
-          expect(error.message).toContain('Request validation failed');
-          expect(error.code).toBe(-32602); // Invalid params
-          expect(error.data).toBeDefined();
+        } catch (error: unknown) {
+          const mcpError = error as Error & { code: number; data: unknown };
+          expect(mcpError.message).toContain('Request validation failed');
+          expect(mcpError.code).toBe(-32602); // Invalid params
+          expect(mcpError.data).toBeDefined();
         }
       });
 
@@ -363,9 +379,10 @@ describe('RequestValidator', () => {
 
         try {
           await validator.validateRequest(request);
-        } catch (error: any) {
-          expect(error.message).toContain('Method not found');
-          expect(error.code).toBe(-32601);
+        } catch (error: unknown) {
+          const mcpError = error as Error & { code: number };
+          expect(mcpError.message).toContain('Method not found');
+          expect(mcpError.code).toBe(-32601);
         }
       });
     });
@@ -395,7 +412,9 @@ describe('RequestValidator', () => {
           result: { data: 'success' },
         };
 
-        await expect(validator.validateResponse(validResponse, 'unknown/method')).resolves.toBeUndefined();
+        await expect(
+          validator.validateResponse(validResponse, 'unknown/method'),
+        ).resolves.toBeUndefined();
       });
 
       it('should validate a valid MCP error response', async () => {
@@ -409,7 +428,9 @@ describe('RequestValidator', () => {
           },
         };
 
-        await expect(validator.validateResponse(validResponse, 'tools/list')).resolves.toBeUndefined();
+        await expect(
+          validator.validateResponse(validResponse, 'tools/list'),
+        ).resolves.toBeUndefined();
       });
 
       it('should reject response without jsonrpc field', async () => {
@@ -418,7 +439,9 @@ describe('RequestValidator', () => {
           result: { data: 'success' },
         };
 
-        await expect(validator.validateResponse(invalidResponse, 'tools/list')).rejects.toThrow('Response validation failed');
+        await expect(validator.validateResponse(invalidResponse, 'tools/list')).rejects.toThrow(
+          'Response validation failed',
+        );
       });
 
       it('should reject response with wrong jsonrpc version', async () => {
@@ -428,7 +451,9 @@ describe('RequestValidator', () => {
           result: { data: 'success' },
         };
 
-        await expect(validator.validateResponse(invalidResponse, 'tools/list')).rejects.toThrow('Response validation failed');
+        await expect(validator.validateResponse(invalidResponse, 'tools/list')).rejects.toThrow(
+          'Response validation failed',
+        );
       });
     });
 
@@ -466,7 +491,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateResponse(response, 'tools/list')).rejects.toThrow('Response validation failed');
+          await expect(validator.validateResponse(response, 'tools/list')).rejects.toThrow(
+            'Response validation failed',
+          );
         });
       });
 
@@ -514,7 +541,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateResponse(response, 'tools/call')).rejects.toThrow('Response validation failed');
+          await expect(validator.validateResponse(response, 'tools/call')).rejects.toThrow(
+            'Response validation failed',
+          );
         });
       });
 
@@ -535,7 +564,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateResponse(response, 'resources/list')).resolves.toBeUndefined();
+          await expect(
+            validator.validateResponse(response, 'resources/list'),
+          ).resolves.toBeUndefined();
         });
 
         it('should validate resources/list response with minimal resource info', async () => {
@@ -552,7 +583,9 @@ describe('RequestValidator', () => {
             },
           };
 
-          await expect(validator.validateResponse(response, 'resources/list')).resolves.toBeUndefined();
+          await expect(
+            validator.validateResponse(response, 'resources/list'),
+          ).resolves.toBeUndefined();
         });
       });
 
@@ -563,7 +596,9 @@ describe('RequestValidator', () => {
           result: { anything: 'goes here' },
         };
 
-        await expect(validator.validateResponse(response, 'unknown/method')).resolves.toBeUndefined();
+        await expect(
+          validator.validateResponse(response, 'unknown/method'),
+        ).resolves.toBeUndefined();
       });
 
       it('should skip method-specific validation for error responses', async () => {
@@ -592,10 +627,11 @@ describe('RequestValidator', () => {
 
         try {
           await validator.validateResponse(response, 'tools/list');
-        } catch (error: any) {
-          expect(error.message).toContain('Response validation failed');
-          expect(error.code).toBe(-32603); // Internal error
-          expect(error.data).toBeDefined();
+        } catch (error: unknown) {
+          const mcpError = error as Error & { code: number; data: unknown };
+          expect(mcpError.message).toContain('Response validation failed');
+          expect(mcpError.code).toBe(-32603); // Internal error
+          expect(mcpError.data).toBeDefined();
         }
       });
     });

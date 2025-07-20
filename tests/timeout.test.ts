@@ -13,11 +13,11 @@ jest.mock('../src/logger.js', () => ({
   },
 }));
 
-import { TimeoutManager, type TimeoutConfig } from '../src/middleware/timeout.js';
 import { McpTimeoutError } from '../src/middleware/error-handler.js';
+import { type TimeoutConfig, TimeoutManager } from '../src/middleware/timeout.js';
 
 // Helper function to sleep
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('TimeoutManager', () => {
   let timeoutManager: TimeoutManager;
@@ -175,7 +175,7 @@ describe('TimeoutManager', () => {
       // Promise should still be pending, but won't reject
       const raceResult = await Promise.race([
         promise.catch(() => 'timeout'),
-        sleep(150).then(() => 'success')
+        sleep(150).then(() => 'success'),
       ]);
 
       expect(raceResult).toBe('success');
@@ -313,10 +313,10 @@ describe('TimeoutManager', () => {
         Promise.race([timeout3.promise.catch(() => 'timeout'), sleep(50).then(() => 'cleared')]),
       ]);
 
-      results.forEach(result => {
+      for (const result of results) {
         expect(result.status).toBe('fulfilled');
         expect((result as PromiseFulfilledResult<string>).value).toBe('cleared');
-      });
+      }
     });
 
     it('should handle clearing when no timeouts are active', async () => {
@@ -420,16 +420,16 @@ describe('TimeoutManager', () => {
       });
 
       // Create multiple concurrent timeouts
-      const promises = Array(10).fill(0).map((_, i) =>
-        manager.createTimeout(`method${i}`).catch(() => `timeout-${i}`)
-      );
+      const promises = Array(10)
+        .fill(0)
+        .map((_, i) => manager.createTimeout(`method${i}`).catch(() => `timeout-${i}`));
 
       const results = await Promise.all(promises);
 
       // All should timeout
-      results.forEach((result, i) => {
+      for (const [i, result] of results.entries()) {
         expect(result).toBe(`timeout-${i}`);
-      });
+      }
 
       const stats = manager.getStats();
       expect(stats.totalTimeouts).toBe(10);
@@ -443,9 +443,9 @@ describe('TimeoutManager', () => {
       });
 
       // Create multiple clearable timeouts
-      const clearableTimeouts = Array(5).fill(0).map((_, i) =>
-        manager.createClearableTimeout(`method${i}`)
-      );
+      const clearableTimeouts = Array(5)
+        .fill(0)
+        .map((_, i) => manager.createClearableTimeout(`method${i}`));
 
       // Clear them all concurrently
       await Promise.all(clearableTimeouts.map(({ clear }) => clear()));
@@ -461,24 +461,26 @@ describe('TimeoutManager', () => {
       });
 
       // Create some that will timeout
-      const timeoutPromises = Array(3).fill(0).map((_, i) =>
-        manager.createTimeout(`timeout-method${i}`).catch(() => `timeout-${i}`)
-      );
+      const timeoutPromises = Array(3)
+        .fill(0)
+        .map((_, i) => manager.createTimeout(`timeout-method${i}`).catch(() => `timeout-${i}`));
 
       // Create some that will be cleared
-      const clearableTimeouts = Array(3).fill(0).map((_, i) =>
-        manager.createClearableTimeout(`clear-method${i}`)
-      );
+      const clearableTimeouts = Array(3)
+        .fill(0)
+        .map((_, i) => manager.createClearableTimeout(`clear-method${i}`));
 
       // Clear the clearable ones immediately
-      clearableTimeouts.forEach(({ clear }) => clear());
+      for (const { clear } of clearableTimeouts) {
+        clear();
+      }
 
       // Wait for timeouts to complete
       const timeoutResults = await Promise.all(timeoutPromises);
 
-      timeoutResults.forEach((result, i) => {
+      for (const [i, result] of timeoutResults.entries()) {
         expect(result).toBe(`timeout-${i}`);
-      });
+      }
 
       const stats = manager.getStats();
       expect(stats.totalTimeouts).toBe(3);
@@ -585,7 +587,7 @@ describe('TimeoutManager', () => {
         methodTimeouts: {
           'method/with/slashes': 50,
           'method-with-dashes': 50,
-          'method_with_underscores': 50,
+          method_with_underscores: 50,
           'method.with.dots': 50,
         },
       });
@@ -595,15 +597,15 @@ describe('TimeoutManager', () => {
         'method/with/slashes',
         'method-with-dashes',
         'method_with_underscores',
-        'method.with.dots'
-      ].map(method => manager.createTimeout(method).catch(() => method));
+        'method.with.dots',
+      ].map((method) => manager.createTimeout(method).catch(() => method));
 
       const results = await Promise.all(promises);
       expect(results).toEqual([
         'method/with/slashes',
         'method-with-dashes',
         'method_with_underscores',
-        'method.with.dots'
+        'method.with.dots',
       ]);
     });
   });

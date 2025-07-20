@@ -1,21 +1,21 @@
 // ABOUTME: MCP load and performance tests with mocked server responses
 // ABOUTME: Tests server performance characteristics using mocked responses
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 class MockedMcpLoadTester {
   private sessionId: string;
-  private requestCount: number = 0;
+  private requestCount = 0;
 
   constructor() {
     this.sessionId = `load-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
-  async makeRequest(method: string, params: any = {}): Promise<any> {
+  async makeRequest(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
     this.requestCount++;
 
     // Simulate small network delay
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
+    await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
 
     // Mock responses based on method
     switch (method) {
@@ -26,8 +26,8 @@ class MockedMcpLoadTester {
           result: {
             protocolVersion: '2024-11-05',
             serverInfo: { name: 'mcp-agent-social', version: '1.0.3' },
-            capabilities: { tools: {}, resources: {}, sampling: {} }
-          }
+            capabilities: { tools: {}, resources: {}, sampling: {} },
+          },
         };
 
       case 'tools/call':
@@ -36,14 +36,14 @@ class MockedMcpLoadTester {
             jsonrpc: '2.0',
             id: this.requestCount,
             result: {
-              content: [{ type: 'text', text: 'Mocked sampling response' }]
-            }
+              content: [{ type: 'text', text: 'Mocked sampling response' }],
+            },
           };
         }
         return {
           jsonrpc: '2.0',
           id: this.requestCount,
-          result: { content: [{ type: 'text', text: 'Mocked tool response' }] }
+          result: { content: [{ type: 'text', text: 'Mocked tool response' }] },
         };
 
       case 'resources/read':
@@ -51,8 +51,8 @@ class MockedMcpLoadTester {
           jsonrpc: '2.0',
           id: this.requestCount,
           result: {
-            contents: [{ uri: params.uri, mimeType: 'application/json', text: '{"mocked": true}' }]
-          }
+            contents: [{ uri: params.uri, mimeType: 'application/json', text: '{"mocked": true}' }],
+          },
         };
 
       default:
@@ -64,11 +64,13 @@ class MockedMcpLoadTester {
     await this.makeRequest('initialize', {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {}, resources: {}, sampling: {} },
-      clientInfo: { name: 'load-tester', version: '1.0.3' }
+      clientInfo: { name: 'load-tester', version: '1.0.3' },
     });
   }
 
-  async runBasicLoadTest(requests: number = 10): Promise<{ success: number; failed: number; avgTime: number }> {
+  async runBasicLoadTest(
+    requests = 10,
+  ): Promise<{ success: number; failed: number; avgTime: number }> {
     const startTime = Date.now();
     let success = 0;
     let failed = 0;
@@ -88,14 +90,19 @@ class MockedMcpLoadTester {
     return { success, failed, avgTime: totalTime / requests };
   }
 
-  async runSequentialTest(requests: number = 5): Promise<{ success: number; failed: number; totalTime: number }> {
+  async runSequentialTest(
+    requests = 5,
+  ): Promise<{ success: number; failed: number; totalTime: number }> {
     const startTime = Date.now();
     let success = 0;
     let failed = 0;
 
     for (let i = 0; i < requests; i++) {
       try {
-        await this.makeRequest('tools/call', { name: 'create_post', arguments: { content: `Test post ${i}` } });
+        await this.makeRequest('tools/call', {
+          name: 'create_post',
+          arguments: { content: `Test post ${i}` },
+        });
         success++;
       } catch {
         failed++;
@@ -144,8 +151,8 @@ describe('MCP Load and Performance Tests (Mocked)', () => {
         name: 'sampling_create',
         arguments: {
           messages: [{ role: 'user', content: 'Test message' }],
-          model: 'claude-3-sonnet'
-        }
+          model: 'claude-3-sonnet',
+        },
       });
 
       expect(response.result.content).toBeDefined();
@@ -154,7 +161,7 @@ describe('MCP Load and Performance Tests (Mocked)', () => {
 
     test('should access roots resource', async () => {
       const response = await tester.makeRequest('resources/read', {
-        uri: 'social://roots'
+        uri: 'social://roots',
       });
 
       expect(response.result.contents).toBeDefined();

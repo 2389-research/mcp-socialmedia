@@ -2,11 +2,11 @@
 // ABOUTME: Validates session requirements, input validation, and post creation
 
 import { jest } from '@jest/globals';
-import { createPostToolHandler, CreatePostToolContext } from '../../src/tools/create-post';
-import { SessionManager } from '../../src/session-manager';
-import { ApiClient } from '../../src/api-client';
-import { CreatePostToolResponse, Post } from '../../src/types';
+import type { ApiClient } from '../../src/api-client';
 import { config } from '../../src/config';
+import { SessionManager } from '../../src/session-manager';
+import { type CreatePostToolContext, createPostToolHandler } from '../../src/tools/create-post';
+import { type CreatePostToolResponse, Post } from '../../src/types';
 
 describe('Create Post Tool', () => {
   let sessionManager: SessionManager;
@@ -71,11 +71,11 @@ describe('Create Post Tool', () => {
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.post).toBeDefined();
-      expect(response.post!.content).toBe(content);
-      expect(response.post!.author_name).toBe('test-agent');
-      expect(response.post!.team_name).toBe(config.teamName);
-      expect(response.post!.id).toBeDefined();
-      expect(response.post!.timestamp).toBeDefined();
+      expect(response.post?.content).toBe(content);
+      expect(response.post?.author_name).toBe('test-agent');
+      expect(response.post?.team_name).toBe(config.teamName);
+      expect(response.post?.id).toBeDefined();
+      expect(response.post?.timestamp).toBeDefined();
       expect(response.error).toBeUndefined();
     });
 
@@ -87,8 +87,8 @@ describe('Create Post Tool', () => {
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.content).toBe(content);
-      expect(response.post!.tags).toEqual(tags);
+      expect(response.post?.content).toBe(content);
+      expect(response.post?.tags).toEqual(tags);
     });
 
     it('should trim content and tags', async () => {
@@ -97,13 +97,13 @@ describe('Create Post Tool', () => {
           content: '  Trimmed content  ',
           tags: [' tag1 ', '  tag2  '],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.content).toBe('Trimmed content');
-      expect(response.post!.tags).toEqual(['tag1', 'tag2']);
+      expect(response.post?.content).toBe('Trimmed content');
+      expect(response.post?.tags).toEqual(['tag1', 'tag2']);
     });
 
     it('should filter out empty tags after trimming', async () => {
@@ -112,12 +112,12 @@ describe('Create Post Tool', () => {
           content: 'Post with filtered tags',
           tags: ['valid', '  ', '', 'another'],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.tags).toEqual(['valid', 'another']);
+      expect(response.post?.tags).toEqual(['valid', 'another']);
     });
 
     it('should generate unique post IDs', async () => {
@@ -127,7 +127,7 @@ describe('Create Post Tool', () => {
       const response1: CreatePostToolResponse = JSON.parse(result1.content[0].text);
       const response2: CreatePostToolResponse = JSON.parse(result2.content[0].text);
 
-      expect(response1.post!.id).not.toBe(response2.post!.id);
+      expect(response1.post?.id).not.toBe(response2.post?.id);
     });
 
     it('should call the API client to create posts', async () => {
@@ -161,7 +161,7 @@ describe('Create Post Tool', () => {
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.author_name).toBe('specific-agent');
+      expect(response.post?.author_name).toBe('specific-agent');
     });
 
     it('should use the correct session ID', async () => {
@@ -175,7 +175,7 @@ describe('Create Post Tool', () => {
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.author_name).toBe('custom-agent');
+      expect(response.post?.author_name).toBe('custom-agent');
       expect(mockGetSessionId).toHaveBeenCalled();
     });
   });
@@ -226,12 +226,12 @@ describe('Create Post Tool', () => {
           content: 'Valid content',
           tags: ['valid', '', 'another'],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.tags).toEqual(['valid', 'another']);
+      expect(response.post?.tags).toEqual(['valid', 'another']);
     });
 
     it('should accept empty tags array', async () => {
@@ -240,12 +240,12 @@ describe('Create Post Tool', () => {
           content: 'Post with empty tags array',
           tags: [],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.tags).toEqual([]);
+      expect(response.post?.tags).toEqual([]);
     });
 
     it('should accept undefined tags', async () => {
@@ -254,7 +254,7 @@ describe('Create Post Tool', () => {
           content: 'Post without tags',
           tags: undefined,
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -276,7 +276,7 @@ describe('Create Post Tool', () => {
           content: 'API test post',
           tags: ['test', 'api'],
         },
-        context
+        context,
       );
 
       expect(createPostSpy).toHaveBeenCalledWith(config.teamName, {
@@ -302,7 +302,7 @@ describe('Create Post Tool', () => {
 
     it('should handle API authentication failure', async () => {
       mockApiClient.createPost.mockRejectedValueOnce(
-        new Error('Authentication failed: Invalid API key')
+        new Error('Authentication failed: Invalid API key'),
       );
 
       const result = await createPostToolHandler({ content: 'Auth fail test' }, context);
@@ -371,7 +371,7 @@ describe('Create Post Tool', () => {
           content: 'Complete response test',
           tags: ['complete'],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -413,7 +413,7 @@ describe('Create Post Tool', () => {
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.content).toBe(longContent);
+      expect(response.post?.content).toBe(longContent);
     });
 
     it('should handle special characters in content', async () => {
@@ -423,7 +423,7 @@ describe('Create Post Tool', () => {
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.content).toBe(specialContent);
+      expect(response.post?.content).toBe(specialContent);
     });
 
     it('should handle unicode in content and tags', async () => {
@@ -435,13 +435,13 @@ describe('Create Post Tool', () => {
           content: unicodeContent,
           tags: unicodeTags,
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.content).toBe(unicodeContent);
-      expect(response.post!.tags).toEqual(unicodeTags);
+      expect(response.post?.content).toBe(unicodeContent);
+      expect(response.post?.tags).toEqual(unicodeTags);
     });
   });
 
@@ -473,14 +473,14 @@ describe('Create Post Tool', () => {
           content: 'This is a reply',
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.post).toBeDefined();
-      expect(response.post!.content).toBe('This is a reply');
-      expect(response.post!.parent_post_id).toBe('parent-post-1');
+      expect(response.post?.content).toBe('This is a reply');
+      expect(response.post?.parent_post_id).toBe('parent-post-1');
     });
 
     it('should create a reply with tags', async () => {
@@ -490,13 +490,13 @@ describe('Create Post Tool', () => {
           tags: ['response', 'feedback'],
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.tags).toEqual(['response', 'feedback']);
-      expect(response.post!.parent_post_id).toBe('parent-post-1');
+      expect(response.post?.tags).toEqual(['response', 'feedback']);
+      expect(response.post?.parent_post_id).toBe('parent-post-1');
     });
 
     it('should allow reply to any parent post ID (validation removed for performance)', async () => {
@@ -505,13 +505,13 @@ describe('Create Post Tool', () => {
           content: 'Reply to ghost',
           parent_post_id: 'non-existent-post',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.post).toBeDefined();
-      expect(response.post!.parent_post_id).toBe('non-existent-post');
+      expect(response.post?.parent_post_id).toBe('non-existent-post');
     });
 
     it('should allow nested replies (reply to a reply)', async () => {
@@ -521,12 +521,12 @@ describe('Create Post Tool', () => {
           content: 'First level reply',
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const firstResponse: CreatePostToolResponse = JSON.parse(firstReply.content[0].text);
       expect(firstResponse.success).toBe(true);
-      const firstReplyId = firstResponse.post!.id;
+      const firstReplyId = firstResponse.post?.id;
 
       // Update mock to include the new reply for nested reply test
       mockApiClient.fetchPosts.mockResolvedValue({
@@ -552,12 +552,12 @@ describe('Create Post Tool', () => {
           content: 'Nested reply',
           parent_post_id: firstReplyId,
         },
-        context
+        context,
       );
 
       const nestedResponse: CreatePostToolResponse = JSON.parse(nestedReply.content[0].text);
       expect(nestedResponse.success).toBe(true);
-      expect(nestedResponse.post!.parent_post_id).toBe(firstReplyId);
+      expect(nestedResponse.post?.parent_post_id).toBe(firstReplyId);
     });
 
     it('should require login for creating replies', async () => {
@@ -569,7 +569,7 @@ describe('Create Post Tool', () => {
           content: 'Unauthorized reply',
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -588,7 +588,7 @@ describe('Create Post Tool', () => {
           content: 'Reply with network error',
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -610,7 +610,7 @@ describe('Create Post Tool', () => {
           tags,
           parent_post_id: 'parent-post-1',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -632,12 +632,12 @@ describe('Create Post Tool', () => {
           content: 'Regular post, not a reply',
           tags: ['regular'],
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
-      expect(response.post!.parent_post_id).toBeUndefined();
+      expect(response.post?.parent_post_id).toBeUndefined();
     });
 
     it('should allow empty parent_post_id (validation removed)', async () => {
@@ -646,7 +646,7 @@ describe('Create Post Tool', () => {
           content: 'Reply with empty parent',
           parent_post_id: '',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
@@ -661,13 +661,13 @@ describe('Create Post Tool', () => {
           content: 'Cross-team reply attempt',
           parent_post_id: 'other-team-post',
         },
-        context
+        context,
       );
 
       const response: CreatePostToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(true);
       expect(response.post).toBeDefined();
-      expect(response.post!.parent_post_id).toBe('other-team-post');
+      expect(response.post?.parent_post_id).toBe('other-team-post');
     });
   });
 });

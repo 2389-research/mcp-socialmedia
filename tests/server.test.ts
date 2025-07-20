@@ -44,7 +44,7 @@ describe('MCP Agent Social Server', () => {
             },
           ],
         };
-      }
+      },
     );
 
     server.registerTool(
@@ -69,7 +69,7 @@ describe('MCP Agent Social Server', () => {
             },
           ],
         };
-      }
+      },
     );
 
     server.registerTool(
@@ -95,7 +95,7 @@ describe('MCP Agent Social Server', () => {
             },
           ],
         };
-      }
+      },
     );
   });
 

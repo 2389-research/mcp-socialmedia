@@ -43,10 +43,23 @@
       "linter": {
         "rules": {}
       }
+    },
+    {
+      "include": ["tests/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     }
   ],
   "files": {
-    "include": ["src/**/*.ts"],
+    "include": ["src/**/*.ts", "tests/**/*.ts"],
     "ignore": ["node_modules", "dist", "coverage", "*.config.js", "*.config.ts"]
   }
 }

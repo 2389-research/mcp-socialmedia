@@ -2,10 +2,10 @@
 // ABOUTME: Validates post retrieval, pagination, and error handling
 
 import { jest } from '@jest/globals';
-import { readPostsToolHandler, ReadPostsToolContext } from '../../src/tools/read-posts';
-import { ApiClient } from '../../src/api-client';
-import { ReadPostsToolResponse, Post } from '../../src/types';
+import type { ApiClient } from '../../src/api-client';
 import { config } from '../../src/config';
+import { type ReadPostsToolContext, readPostsToolHandler } from '../../src/tools/read-posts';
+import { Post, type ReadPostsToolResponse } from '../../src/types';
 
 describe('Read Posts Tool', () => {
   let mockApiClient: jest.Mocked<ApiClient>;
@@ -262,7 +262,7 @@ describe('Read Posts Tool', () => {
   describe('Error handling', () => {
     it('should handle API authentication failure', async () => {
       mockApiClient.fetchPosts.mockRejectedValueOnce(
-        new Error('Authentication failed: Invalid API key')
+        new Error('Authentication failed: Invalid API key'),
       );
 
       const result = await readPostsToolHandler({}, context);
@@ -356,7 +356,7 @@ describe('Read Posts Tool', () => {
 
     it('should include error field in failure response', async () => {
       mockApiClient.fetchPosts.mockRejectedValueOnce(
-        new Error('Authentication failed: Invalid API key')
+        new Error('Authentication failed: Invalid API key'),
       );
 
       const result = await readPostsToolHandler({}, context);
@@ -522,7 +522,7 @@ describe('Read Posts Tool', () => {
           tag_filter: 'update',
           limit: 5,
         },
-        context
+        context,
       );
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -531,8 +531,8 @@ describe('Read Posts Tool', () => {
         expect(response.posts).toBeDefined();
         expect(
           response.posts.every(
-            (post) => post.author_name === 'agent-alice' && post.tags.includes('update')
-          )
+            (post) => post.author_name === 'agent-alice' && post.tags.includes('update'),
+          ),
         ).toBe(true);
         expect(response.limit).toBe(5);
       }
@@ -565,7 +565,7 @@ describe('Read Posts Tool', () => {
           tag_filter: ' update ',
           thread_id: ' post-seed-2 ',
         },
-        context
+        context,
       );
 
       expect(fetchPostsSpy).toHaveBeenCalledWith(config.teamName, {
@@ -625,7 +625,7 @@ describe('Read Posts Tool', () => {
           tag_filter: undefined,
           thread_id: undefined,
         },
-        context
+        context,
       );
 
       const response: ReadPostsToolResponse = JSON.parse(result.content[0].text);
@@ -677,7 +677,7 @@ describe('Read Posts Tool', () => {
           limit: 1,
           offset: 0,
         },
-        context
+        context,
       );
 
       // Get second page
@@ -687,14 +687,19 @@ describe('Read Posts Tool', () => {
           limit: 1,
           offset: 1,
         },
-        context
+        context,
       );
 
       const response1: ReadPostsToolResponse = JSON.parse(page1.content[0].text);
       const response2: ReadPostsToolResponse = JSON.parse(page2.content[0].text);
 
       // Should get different posts
-      if (response1.success && response2.success && response1.posts.length > 0 && response2.posts.length > 0) {
+      if (
+        response1.success &&
+        response2.success &&
+        response1.posts.length > 0 &&
+        response2.posts.length > 0
+      ) {
         expect(response1.posts[0].id).not.toBe(response2.posts[0].id);
       }
     });

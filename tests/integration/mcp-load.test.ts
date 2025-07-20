@@ -1,8 +1,8 @@
 // ABOUTME: MCP load testing and stress testing suite
 // ABOUTME: Tests performance, concurrent connections, and system limits
 
-import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
+import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
 
 // Use Node.js built-in fetch (available in Node 18+)
 const fetch = globalThis.fetch;
@@ -15,20 +15,24 @@ class McpLoadTester {
     this.baseUrl = baseUrl;
   }
 
-  async makeRequest(sessionId: string, method: string, params: any = {}): Promise<any> {
+  async makeRequest(
+    sessionId: string,
+    method: string,
+    params: Record<string, unknown> = {},
+  ): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/mcp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        'Mcp-Session-Id': sessionId
+        Accept: 'application/json, text/event-stream',
+        'Mcp-Session-Id': sessionId,
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
         id: Date.now(),
         method,
-        params
-      })
+        params,
+      }),
     });
 
     const text = await response.text();
@@ -36,7 +40,7 @@ class McpLoadTester {
     // Handle SSE format
     if (text.startsWith('event:')) {
       const lines = text.split('\n');
-      const dataLine = lines.find(line => line.startsWith('data:'));
+      const dataLine = lines.find((line) => line.startsWith('data:'));
       if (dataLine) {
         return JSON.parse(dataLine.substring(5));
       }
@@ -49,7 +53,7 @@ class McpLoadTester {
     await this.makeRequest(sessionId, 'initialize', {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {}, resources: {}, prompts: {}, sampling: {} },
-      clientInfo: { name: 'load-tester', version: '1.0.3' }
+      clientInfo: { name: 'load-tester', version: '1.0.3' },
     });
   }
 
@@ -74,7 +78,7 @@ class McpLoadTester {
         const duration = performance.now() - requestStart;
         results.push(duration);
         successCount++;
-      } catch (error) {
+      } catch (_error) {
         failCount++;
       }
     }
@@ -83,7 +87,8 @@ class McpLoadTester {
       totalRequests: successCount + failCount,
       successfulRequests: successCount,
       failedRequests: failCount,
-      averageResponseTime: results.length > 0 ? results.reduce((a, b) => a + b, 0) / results.length : 0
+      averageResponseTime:
+        results.length > 0 ? results.reduce((a, b) => a + b, 0) / results.length : 0,
     };
   }
 }
@@ -94,7 +99,7 @@ async function isServerRunning(url: string): Promise<boolean> {
     const response = await fetch(`${url}/mcp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}'
+      body: '{}',
     });
     return response.status !== undefined;
   } catch {
@@ -104,7 +109,7 @@ async function isServerRunning(url: string): Promise<boolean> {
 
 describe('MCP Load and Performance Tests', () => {
   let loadTester: McpLoadTester;
-  let serverRunning: boolean = false;
+  let serverRunning = false;
 
   beforeAll(async () => {
     const testUrl = process.env.TEST_URL || 'http://localhost:3000';
@@ -113,17 +118,18 @@ describe('MCP Load and Performance Tests', () => {
     if (serverRunning) {
       loadTester = new McpLoadTester(testUrl);
       // Give server time to be ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log('✅ Using existing server on', testUrl);
     } else {
       // If TEST_SERVER_AUTO_START is set, these tests should always run
       if (process.env.TEST_SERVER_AUTO_START === 'true') {
-        throw new Error(`❌ Expected server to be running on ${testUrl} but it's not available. Check test setup.`);
-      } else {
-        console.warn('⚠️  HTTP MCP server not running on', testUrl);
-        console.warn('   To run load tests, start the server with: npm run start:http');
-        console.warn('   Or use the full integration script: npm run test:integration');
+        throw new Error(
+          `❌ Expected server to be running on ${testUrl} but it's not available. Check test setup.`,
+        );
       }
+      console.warn('⚠️  HTTP MCP server not running on', testUrl);
+      console.warn('   To run load tests, start the server with: npm run start:http');
+      console.warn('   Or use the full integration script: npm run test:integration');
     }
   });
 
@@ -178,7 +184,7 @@ describe('MCP Load and Performance Tests', () => {
       const results = await Promise.allSettled(promises);
       const endTime = performance.now();
 
-      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
       const duration = endTime - startTime;
 
       expect(successful).toBeGreaterThan(15); // At least 75% success
@@ -204,8 +210,8 @@ describe('MCP Load and Performance Tests', () => {
         const result = await loadTester.makeRequest(sessionId, 'tools/call', {
           name: 'sampling_create',
           arguments: {
-            messages: [{ role: 'user', content: 'Test message' }]
-          }
+            messages: [{ role: 'user', content: 'Test message' }],
+          },
         });
 
         const duration = performance.now() - startTime;
@@ -231,7 +237,7 @@ describe('MCP Load and Performance Tests', () => {
 
       try {
         const result = await loadTester.makeRequest(sessionId, 'resources/read', {
-          uri: 'social://roots'
+          uri: 'social://roots',
         });
 
         expect(result.result).toBeDefined();
