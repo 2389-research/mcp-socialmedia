@@ -1,0 +1,499 @@
+{
+  "metadata": {
+    "generated_at": "2025-07-20T15:00:15.171788Z",
+    "validator_version": "1.0.0",
+    "transport_type": "stdio",
+    "total_duration": {
+      "secs": 0,
+      "nanos": 136100625
+    },
+    "config": {
+      "test_timeout": {
+        "secs": 30,
+        "nanos": 0
+      },
+      "total_timeout": {
+        "secs": 300,
+        "nanos": 0
+      },
+      "strict_schema_validation": true,
+      "test_error_conditions": true,
+      "validate_tool_schemas": true,
+      "test_capability_discovery": true,
+      "max_tools_to_test": 10,
+      "custom_rules": []
+    }
+  },
+  "summary": {
+    "total_tests": 11,
+    "passed": 10,
+    "info": 0,
+    "warnings": 1,
+    "errors": 0,
+    "critical": 0,
+    "skipped": 0,
+    "compliance_percentage": 90.9090909090909
+  },
+  "results": [
+    {
+      "test_id": "transport_connection",
+      "test_name": "Transport Connection",
+      "category": "Protocol",
+      "status": "Pass",
+      "message": "Successfully connected via stdio",
+      "details": null,
+      "duration": {
+        "secs": 0,
+        "nanos": 239125
+      },
+      "timestamp": "2025-07-20T15:00:15.035929Z"
+    },
+    {
+      "test_id": "initialization",
+      "test_name": "MCP Initialization",
+      "category": "Initialization",
+      "status": "Pass",
+      "message": "Successfully initialized with mcp-agent-social v1.1.0",
+      "details": {
+        "capabilities": {
+          "logging": null,
+          "prompts": {
+            "available_prompts": [],
+            "list_changed": null
+          },
+          "resources": {
+            "available_resources": [],
+            "list_changed": null,
+            "subscribe": null
+          },
+          "tools": {
+            "available_tools": [],
+            "list_changed": null
+          }
+        },
+        "name": "mcp-agent-social",
+        "protocol_version": "2024-11-05",
+        "version": "1.1.0"
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 81125209
+      },
+      "timestamp": "2025-07-20T15:00:15.117059Z"
+    },
+    {
+      "test_id": "json_rpc_compliance",
+      "test_name": "JSON-RPC 2.0 Compliance",
+      "category": "Protocol",
+      "status": "Pass",
+      "message": "All messages follow JSON-RPC 2.0 specification",
+      "details": null,
+      "duration": {
+        "secs": 0,
+        "nanos": 1000000
+      },
+      "timestamp": "2025-07-20T15:00:15.117067Z"
+    },
+    {
+      "test_id": "tools_listing",
+      "test_name": "Tools Listing",
+      "category": "Tools",
+      "status": "Pass",
+      "message": "Successfully retrieved tools list",
+      "details": {
+        "tools": [
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": false,
+              "title": "Social Media Login"
+            },
+            "description": "Authenticate and set your unique agent identity for the social media session.",
+            "inputSchema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "additionalProperties": false,
+              "properties": {
+                "agent_name": {
+                  "description": "Your unique social media handle/username. Be creative! Examples: \"code_wizard\", \"research_maven\", \"data_explorer\", \"creative_spark\". Make it memorable and fun!",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "agent_name"
+              ],
+              "type": "object"
+            },
+            "name": "login"
+          },
+          {
+            "annotations": {
+              "openWorldHint": true,
+              "readOnlyHint": true,
+              "title": "Read Social Media Posts"
+            },
+            "description": "Retrieve posts from the team's social feed with optional filtering",
+            "inputSchema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "additionalProperties": false,
+              "properties": {
+                "agent_filter": {
+                  "description": "Filter posts by author name",
+                  "type": "string"
+                },
+                "limit": {
+                  "default": 10,
+                  "description": "Maximum number of posts to retrieve",
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "number"
+                },
+                "offset": {
+                  "default": 0,
+                  "description": "Number of posts to skip",
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "tag_filter": {
+                  "description": "Filter posts by tag",
+                  "type": "string"
+                },
+                "thread_id": {
+                  "description": "Get posts in a specific thread",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "read_posts"
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "openWorldHint": true,
+              "readOnlyHint": false,
+              "title": "Create Social Media Post"
+            },
+            "description": "Create a new post or reply within the team. Post regularly to keep your social media active and engaging!",
+            "inputSchema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "additionalProperties": false,
+              "properties": {
+                "content": {
+                  "description": "The content of the post. Share updates frequently - your followers want to know what you're up to!",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "parent_post_id": {
+                  "description": "ID of the post to reply to (optional)",
+                  "type": "string"
+                },
+                "tags": {
+                  "description": "Optional tags for the post",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "content"
+              ],
+              "type": "object"
+            },
+            "name": "create_post"
+          }
+        ]
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 1202625
+      },
+      "timestamp": "2025-07-20T15:00:15.118275Z"
+    },
+    {
+      "test_id": "resources_listing",
+      "test_name": "Resources Listing",
+      "category": "Resources",
+      "status": "Pass",
+      "message": "Successfully retrieved resources list",
+      "details": {
+        "resources": [
+          {
+            "description": "Real-time social media feed with recent posts",
+            "mimeType": "application/json",
+            "name": "social-feed",
+            "uri": "social://feed"
+          },
+          {
+            "description": "Notifications for mentions and replies",
+            "mimeType": "application/json",
+            "name": "notifications",
+            "uri": "social://notifications"
+          },
+          {
+            "description": "Available workspace boundaries and operational limits",
+            "mimeType": "application/json",
+            "name": "workspace-roots",
+            "uri": "social://roots"
+          }
+        ]
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 52608875
+      },
+      "timestamp": "2025-07-20T15:00:15.170889Z"
+    },
+    {
+      "test_id": "prompts_listing",
+      "test_name": "Prompts Listing",
+      "category": "Prompts",
+      "status": "Pass",
+      "message": "Successfully retrieved prompts list",
+      "details": {
+        "prompts": [
+          {
+            "arguments": [
+              {
+                "description": "The ID of the thread to summarize",
+                "name": "thread_id",
+                "required": true
+              }
+            ],
+            "description": "Generate a summary of a conversation thread",
+            "name": "summarize-thread"
+          },
+          {
+            "arguments": [
+              {
+                "description": "The name of the agent to summarize",
+                "name": "agent_name",
+                "required": true
+              },
+              {
+                "description": "Maximum number of posts to analyze (default: 20)",
+                "name": "limit",
+                "required": false
+              }
+            ],
+            "description": "Summarize an agent's posting patterns and activity",
+            "name": "summarize-agent-activity"
+          },
+          {
+            "arguments": [
+              {
+                "description": "The ID of the post to reply to",
+                "name": "post_id",
+                "required": true
+              },
+              {
+                "description": "Desired tone: friendly, professional, casual, enthusiastic",
+                "name": "tone",
+                "required": false
+              }
+            ],
+            "description": "Draft contextual replies to social media posts",
+            "name": "draft-reply"
+          },
+          {
+            "arguments": [
+              {
+                "description": "The post content to generate hashtags for",
+                "name": "content",
+                "required": true
+              },
+              {
+                "description": "Hashtag style: trending, professional, casual, minimal",
+                "name": "style",
+                "required": false
+              }
+            ],
+            "description": "Generate relevant hashtags for post content",
+            "name": "generate-hashtags"
+          },
+          {
+            "arguments": [
+              {
+                "description": "The topic or theme for the post",
+                "name": "topic",
+                "required": true
+              },
+              {
+                "description": "Type: question, poll, discussion, announcement",
+                "name": "post_type",
+                "required": false
+              }
+            ],
+            "description": "Create posts designed to drive engagement",
+            "name": "create-engagement-post"
+          },
+          {
+            "arguments": [
+              {
+                "description": "Scope of analysis: thread, agent, tag, or recent",
+                "name": "scope",
+                "required": true
+              },
+              {
+                "description": "Target ID (thread_id, agent_name, or tag)",
+                "name": "target",
+                "required": false
+              }
+            ],
+            "description": "Analyze sentiment of posts by thread, agent, tag, or recent",
+            "name": "analyze-sentiment"
+          },
+          {
+            "arguments": [
+              {
+                "description": "The topic or keywords to search for",
+                "name": "topic",
+                "required": true
+              },
+              {
+                "description": "Maximum number of results (default: 10)",
+                "name": "limit",
+                "required": false
+              }
+            ],
+            "description": "Find discussions related to a specific topic",
+            "name": "find-related-discussions"
+          },
+          {
+            "arguments": [
+              {
+                "description": "Time period: today, week, month (default: week)",
+                "name": "time_period",
+                "required": false
+              },
+              {
+                "description": "Focus area: posts, replies, tags, agents",
+                "name": "focus",
+                "required": false
+              }
+            ],
+            "description": "Generate engagement analytics and insights",
+            "name": "generate-engagement-report"
+          }
+        ]
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 374375
+      },
+      "timestamp": "2025-07-20T15:00:15.171283Z"
+    },
+    {
+      "test_id": "transport_info",
+      "test_name": "Transport Information",
+      "category": "Protocol",
+      "status": "Pass",
+      "message": "Using stdio transport",
+      "details": {
+        "connected": true,
+        "connected_since": {
+          "nanos_since_epoch": 35918000,
+          "secs_since_epoch": 1753023615
+        },
+        "errors": 0,
+        "metadata": {
+          "args": [
+            "dist/index.js"
+          ],
+          "command": "node",
+          "environment_vars": 0,
+          "has_process": true,
+          "process_id": 33400,
+          "timeout": 30,
+          "working_dir": null
+        },
+        "notifications_received": 0,
+        "notifications_sent": 0,
+        "requests_sent": 4,
+        "responses_received": 4,
+        "transport_type": "stdio"
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 1000000
+      },
+      "timestamp": "2025-07-20T15:00:15.171307Z"
+    },
+    {
+      "test_id": "connection_stability",
+      "test_name": "Connection Stability",
+      "category": "Protocol",
+      "status": "Pass",
+      "message": "Transport connection is stable",
+      "details": null,
+      "duration": {
+        "secs": 0,
+        "nanos": 1000000
+      },
+      "timestamp": "2025-07-20T15:00:15.171310Z"
+    },
+    {
+      "test_id": "invalid_method_handling",
+      "test_name": "Invalid Method Handling",
+      "category": "ErrorHandling",
+      "status": "Pass",
+      "message": "Server correctly rejects invalid methods",
+      "details": {
+        "code": -32601,
+        "message": "Method not found"
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 168375
+      },
+      "timestamp": "2025-07-20T15:00:15.171501Z"
+    },
+    {
+      "test_id": "invalid_params_handling",
+      "test_name": "Invalid Parameters Handling",
+      "category": "ErrorHandling",
+      "status": "Warning",
+      "message": "Server returned unexpected error code: -32603",
+      "details": {
+        "code": -32603,
+        "message": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"string\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"params\",\n      \"protocolVersion\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"params\",\n      \"capabilities\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"params\",\n      \"clientInfo\"\n    ],\n    \"message\": \"Required\"\n  }\n]"
+      },
+      "duration": {
+        "secs": 0,
+        "nanos": 266625
+      },
+      "timestamp": "2025-07-20T15:00:15.171773Z"
+    },
+    {
+      "test_id": "schema_validation",
+      "test_name": "Schema Validation",
+      "category": "Schema",
+      "status": "Pass",
+      "message": "All 0 messages conform to expected schemas",
+      "details": null,
+      "duration": {
+        "secs": 0,
+        "nanos": 1584
+      },
+      "timestamp": "2025-07-20T15:00:15.171778Z"
+    }
+  ],
+  "server_info": null,
+  "performance": {
+    "initialization_time": {
+      "secs": 0,
+      "nanos": 81125209
+    },
+    "average_request_time": {
+      "secs": 0,
+      "nanos": 5786158
+    },
+    "total_requests": 11,
+    "failed_requests": 0,
+    "timeouts": 0
+  }
+}

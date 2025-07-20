@@ -1,0 +1,144 @@
+name: MCP-Probe Integration Tests
+
+on:
+  push:
+    branches: [ main, missing-tests ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  mcp-probe-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install Rust (for mcp-probe)
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install mcp-probe
+      run: cargo install mcp-cli
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Run MCP Protocol Compliance Tests
+      run: |
+        mkdir -p reports/mcp-probe
+        mcp-probe validate \
+          --stdio "node" \
+          --args "dist/index.js" \
+          --working-dir "$PWD" \
+          --report "reports/mcp-probe/compliance-report.json" \
+          --severity "warning"
+
+    - name: Test Tools Discovery and Execution
+      run: |
+        mcp-probe test \
+          --stdio "node" \
+          --args "dist/index.js" \
+          --working-dir "$PWD" \
+          --test-type "tools" \
+          --report "reports/mcp-probe/tools-report.json" || true
+
+    - name: Test Resources Discovery
+      run: |
+        mcp-probe test \
+          --stdio "node" \
+          --args "dist/index.js" \
+          --working-dir "$PWD" \
+          --test-type "resources" \
+          --report "reports/mcp-probe/resources-report.json" || true
+
+    - name: Test Prompts Discovery
+      run: |
+        mcp-probe test \
+          --stdio "node" \
+          --args "dist/index.js" \
+          --working-dir "$PWD" \
+          --test-type "prompts" \
+          --report "reports/mcp-probe/prompts-report.json" || true
+
+    - name: HTTP Transport Test
+      run: |
+        # Start server in background
+        npm run start:http &
+        HTTP_PID=$!
+
+        # Wait for server to start
+        sleep 5
+
+        # Test HTTP+SSE endpoint
+        mcp-probe validate \
+          --http-sse "http://localhost:3000/mcp" \
+          --report "reports/mcp-probe/http-sse-report.json" || true
+
+        # Clean up
+        kill $HTTP_PID 2>/dev/null || true
+
+    - name: Upload MCP-Probe Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mcp-probe-reports
+        path: reports/mcp-probe/
+
+    - name: Comment MCP-Probe Results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          try {
+            const complianceReport = JSON.parse(fs.readFileSync('reports/mcp-probe/compliance-report.json', 'utf8'));
+            const summary = complianceReport.summary;
+
+            const body = `## 🔍 MCP-Probe Test Results
+
+            **Protocol Compliance: ${summary.compliance_percentage.toFixed(1)}%**
+
+            📊 **Test Summary:**
+            - ✅ Passed: ${summary.passed}
+            - ⚠️ Warnings: ${summary.warnings}
+            - ❌ Errors: ${summary.errors}
+            - 🔴 Critical: ${summary.critical}
+            - **Total Tests:** ${summary.total_tests}
+
+            **Performance:**
+            - Initialization: ${complianceReport.performance.initialization_time.nanos / 1000000}ms
+            - Average Request: ${complianceReport.performance.average_request_time.nanos / 1000000}ms
+            - Total Requests: ${complianceReport.performance.total_requests}
+            - Failed Requests: ${complianceReport.performance.failed_requests}
+
+            **Tools Discovered:** ${complianceReport.results.find(r => r.test_id === 'tools_listing')?.details?.tools?.length || 0}
+            **Resources Discovered:** ${complianceReport.results.find(r => r.test_id === 'resources_listing')?.details?.resources?.length || 0}
+            **Prompts Discovered:** ${complianceReport.results.find(r => r.test_id === 'prompts_listing')?.details?.prompts?.length || 0}
+
+            📁 Detailed reports available in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+          } catch (error) {
+            console.log('Could not create comment:', error.message);
+          }
