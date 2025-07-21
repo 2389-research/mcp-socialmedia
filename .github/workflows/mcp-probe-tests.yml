@@ -61,7 +61,7 @@ jobs:
           node scripts/ci-mcp-test.js
         fi
 
-    - name: Test Tools Discovery and Execution
+    - name: Run Automated MCP Tests
       env:
         SOCIALMEDIA_API_BASE_URL: "https://api.example.com"
         SOCIALMEDIA_API_KEY: "test-key-for-ci"
@@ -73,38 +73,8 @@ jobs:
           --stdio "node" \
           --args "dist/index.js" \
           --working-dir "$PWD" \
-          --test-type "tools" \
-          --report "reports/mcp-probe/tools-report.json" || true
-
-    - name: Test Resources Discovery
-      env:
-        SOCIALMEDIA_API_BASE_URL: "https://api.example.com"
-        SOCIALMEDIA_API_KEY: "test-key-for-ci"
-        SOCIALMEDIA_TEAM_ID: "ci-test-team"
-        LOG_LEVEL: "error"
-        CI: "true"
-      run: |
-        mcp-probe test \
-          --stdio "node" \
-          --args "dist/index.js" \
-          --working-dir "$PWD" \
-          --test-type "resources" \
-          --report "reports/mcp-probe/resources-report.json" || true
-
-    - name: Test Prompts Discovery
-      env:
-        SOCIALMEDIA_API_BASE_URL: "https://api.example.com"
-        SOCIALMEDIA_API_KEY: "test-key-for-ci"
-        SOCIALMEDIA_TEAM_ID: "ci-test-team"
-        LOG_LEVEL: "error"
-        CI: "true"
-      run: |
-        mcp-probe test \
-          --stdio "node" \
-          --args "dist/index.js" \
-          --working-dir "$PWD" \
-          --test-type "prompts" \
-          --report "reports/mcp-probe/prompts-report.json" || true
+          --report \
+          --output-dir "reports/mcp-probe" || true
 
     - name: HTTP Transport Test
       env:
@@ -126,7 +96,8 @@ jobs:
         # Test HTTP+SSE endpoint
         mcp-probe validate \
           --http-sse "http://localhost:3000/mcp" \
-          --report "reports/mcp-probe/http-sse-report.json" || true
+          --report "reports/mcp-probe/http-sse-report.json" \
+          --severity "warning" || true
 
         # Clean up
         kill $HTTP_PID 2>/dev/null || true
