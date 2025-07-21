@@ -33,11 +33,6 @@ jobs:
         COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
         echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
 
-    - name: Extract coverage percentage
-      run: |
-        COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
-        echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
-
     - name: Generate Coverage Badge
       uses: schneegans/dynamic-badges-action@v1.7.0
       with:
