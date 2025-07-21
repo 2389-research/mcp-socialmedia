@@ -26,6 +26,7 @@
     "typecheck": "tsc --noEmit",
     "mcp-probe": "./scripts/mcp-probe-tests.sh",
     "mcp-probe:validate": "mcp-probe validate --stdio 'node' --args 'dist/index.js' --working-dir '$PWD'",
+    "mcp-probe:ci": "node scripts/ci-mcp-test.js",
     "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [

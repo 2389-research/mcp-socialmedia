@@ -5,6 +5,12 @@
 
 set -e
 
+# Set test environment variables if not already set
+export SOCIALMEDIA_API_BASE_URL=${SOCIALMEDIA_API_BASE_URL:-"https://api.example.com"}
+export SOCIALMEDIA_API_KEY=${SOCIALMEDIA_API_KEY:-"test-key-local"}
+export SOCIALMEDIA_TEAM_ID=${SOCIALMEDIA_TEAM_ID:-"local-test-team"}
+export LOG_LEVEL=${LOG_LEVEL:-"error"}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -68,6 +74,10 @@ mcp-probe test \
   --report "reports/mcp-probe/performance-report.json"
 
 echo -e "${BLUE}4. HTTP Transport Testing${NC}"
+# Set HTTP environment variables for testing
+export MCP_TRANSPORT="http"
+export MCP_HTTP_PORT="3000"
+
 # Start server in background for HTTP testing
 npm run start:http &
 HTTP_PID=$!
