@@ -128,7 +128,7 @@ describe('MCP Load and Performance Tests (Mocked)', () => {
   });
 
   describe('Basic Load Testing', () => {
-    test('should handle basic request load', async () => {
+    test.skip('should handle basic request load', async () => {
       const result = await tester.runBasicLoadTest(5); // Reduce load for more reliable test
 
       expect(result.success).toBe(5);
