@@ -1,4 +1,4 @@
-name: Coverage
+name: Test Coverage
 
 on:
   push:
@@ -7,33 +7,29 @@ on:
     branches: [ main ]
 
 jobs:
-  coverage:
+  test:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y jq
-
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
 
     - name: Install dependencies
       run: npm ci
 
     - name: Run tests with coverage
-      run: npm test -- --coverage
+      run: npm run test:coverage
       env:
         NODE_ENV: test
 
-    - name: Upload coverage reports to Codecov
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
