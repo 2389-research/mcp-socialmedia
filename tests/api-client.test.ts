@@ -2,8 +2,16 @@
 // ABOUTME: Uses dependency injection to mock HTTP requests in tests only
 
 import { jest } from '@jest/globals';
-import { ApiClient, FetchFunction } from '../src/api-client';
-import { PostData, PostQueryOptions } from '../src/types';
+import { ApiClient, type FetchFunction } from '../src/api-client';
+import type { PostData, PostQueryOptions } from '../src/types';
+
+// Mock Response type for testing
+type MockResponse = {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  json: jest.MockedFunction<() => Promise<unknown>>;
+};
 
 describe('ApiClient', () => {
   let apiClient: ApiClient;
@@ -62,7 +70,7 @@ describe('ApiClient', () => {
         status: 200,
         statusText: 'OK',
         json: jest.fn().mockResolvedValue(mockRemoteResponse),
-      } as any);
+      } as MockResponse);
 
       const result = await apiClient.fetchPosts('test-team');
 
@@ -74,7 +82,7 @@ describe('ApiClient', () => {
           headers: expect.objectContaining({
             'x-api-key': apiKey,
           }),
-        })
+        }),
       );
     });
 
@@ -90,13 +98,13 @@ describe('ApiClient', () => {
         status: 200,
         statusText: 'OK',
         json: jest.fn().mockResolvedValue({ posts: [], total: 0, has_more: false }),
-      } as any);
+      } as MockResponse);
 
       await apiClient.fetchPosts('test-team', options);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('limit=5&agent=test-agent&tag=test-tag'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -106,10 +114,10 @@ describe('ApiClient', () => {
         status: 401,
         statusText: 'Unauthorized',
         json: jest.fn().mockResolvedValue({ error: 'Invalid API key' }),
-      } as any);
+      } as MockResponse);
 
       await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
-        'Authentication failed: Invalid API key'
+        'Authentication failed: Invalid API key',
       );
     });
 
@@ -156,7 +164,7 @@ describe('ApiClient', () => {
         status: 201,
         statusText: 'Created',
         json: jest.fn().mockResolvedValue(mockRemoteResponse),
-      } as any);
+      } as MockResponse);
 
       const result = await apiClient.createPost('test-team', postData);
 
@@ -175,7 +183,7 @@ describe('ApiClient', () => {
             tags: postData.tags,
             parentPostId: postData.parent_post_id,
           }),
-        })
+        }),
       );
     });
 
@@ -191,10 +199,10 @@ describe('ApiClient', () => {
         status: 422,
         statusText: 'Unprocessable Entity',
         json: jest.fn().mockResolvedValue({ error: 'Validation failed' }),
-      } as any);
+      } as MockResponse);
 
       await expect(apiClient.createPost('test-team', postData)).rejects.toThrow(
-        'Validation failed'
+        'Validation failed',
       );
     });
 
@@ -210,10 +218,10 @@ describe('ApiClient', () => {
         status: 429,
         statusText: 'Too Many Requests',
         json: jest.fn().mockResolvedValue({ error: 'Rate limit exceeded' }),
-      } as any);
+      } as MockResponse);
 
       await expect(apiClient.createPost('test-team', postData)).rejects.toThrow(
-        'Rate limit exceeded: Rate limit exceeded'
+        'Rate limit exceeded: Rate limit exceeded',
       );
     });
   });
@@ -225,7 +233,7 @@ describe('ApiClient', () => {
         status: 500,
         statusText: 'Internal Server Error',
         json: jest.fn().mockResolvedValue({ error: 'Server error' }),
-      } as any);
+      } as MockResponse);
 
       await expect(apiClient.fetchPosts('test-team')).rejects.toThrow('Server error: Server error');
     });
@@ -236,10 +244,10 @@ describe('ApiClient', () => {
         status: 400,
         statusText: 'Bad Request',
         json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
-      } as any);
+      } as MockResponse);
 
       await expect(apiClient.fetchPosts('test-team')).rejects.toThrow(
-        'API request failed: 400 Bad Request'
+        'API request failed: 400 Bad Request',
       );
     });
   });

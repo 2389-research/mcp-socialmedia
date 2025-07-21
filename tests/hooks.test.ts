@@ -16,7 +16,10 @@ jest.mock('../src/logger.js', () => ({
 // Mock error classes
 jest.mock('../src/middleware/error-handler.js', () => ({
   McpRateLimitError: class McpRateLimitError extends Error {
-    constructor(message: string, public retryAfter: number) {
+    constructor(
+      message: string,
+      public retryAfter: number,
+    ) {
       super(message);
       this.name = 'McpRateLimitError';
     }
@@ -25,11 +28,11 @@ jest.mock('../src/middleware/error-handler.js', () => ({
 
 import { HooksManager } from '../src/hooks/index.js';
 import type {
+  ErrorHook,
   Hook,
+  HookContext,
   RequestHook,
   ResponseHook,
-  ErrorHook,
-  HookContext,
 } from '../src/hooks/types.js';
 
 describe('HooksManager', () => {
@@ -51,14 +54,14 @@ describe('HooksManager', () => {
       const hooks = hooksManager.getAllHooks();
 
       expect(hooks.length).toBeGreaterThan(0);
-      expect(hooks.some(h => h.name === 'request-logger')).toBe(true);
-      expect(hooks.some(h => h.name === 'response-enricher')).toBe(true);
-      expect(hooks.some(h => h.name === 'error-enricher')).toBe(true);
-      expect(hooks.some(h => h.name === 'rate-limiter')).toBe(true);
+      expect(hooks.some((h) => h.name === 'request-logger')).toBe(true);
+      expect(hooks.some((h) => h.name === 'response-enricher')).toBe(true);
+      expect(hooks.some((h) => h.name === 'error-enricher')).toBe(true);
+      expect(hooks.some((h) => h.name === 'rate-limiter')).toBe(true);
     });
 
     it('should sort hooks by priority', () => {
-      const requestHooks = hooksManager.getAllHooks().filter(h => h.type === 'request');
+      const requestHooks = hooksManager.getAllHooks().filter((h) => h.type === 'request');
 
       for (let i = 1; i < requestHooks.length; i++) {
         expect(requestHooks[i - 1].priority).toBeLessThanOrEqual(requestHooks[i].priority);
@@ -75,9 +78,9 @@ describe('HooksManager', () => {
         execute: jest.fn().mockResolvedValue(undefined),
       };
 
-      const initialCount = hooksManager.getAllHooks().filter(h => h.type === 'request').length;
+      const initialCount = hooksManager.getAllHooks().filter((h) => h.type === 'request').length;
       hooksManager.registerHook(testHook);
-      const finalCount = hooksManager.getAllHooks().filter(h => h.type === 'request').length;
+      const finalCount = hooksManager.getAllHooks().filter((h) => h.type === 'request').length;
 
       expect(finalCount).toBe(initialCount + 1);
       expect(hooksManager.getAllHooks()).toContain(testHook);
@@ -91,9 +94,9 @@ describe('HooksManager', () => {
         execute: jest.fn().mockResolvedValue(undefined),
       };
 
-      const initialCount = hooksManager.getAllHooks().filter(h => h.type === 'response').length;
+      const initialCount = hooksManager.getAllHooks().filter((h) => h.type === 'response').length;
       hooksManager.registerHook(testHook);
-      const finalCount = hooksManager.getAllHooks().filter(h => h.type === 'response').length;
+      const finalCount = hooksManager.getAllHooks().filter((h) => h.type === 'response').length;
 
       expect(finalCount).toBe(initialCount + 1);
       expect(hooksManager.getAllHooks()).toContain(testHook);
@@ -107,9 +110,9 @@ describe('HooksManager', () => {
         execute: jest.fn().mockResolvedValue(undefined),
       };
 
-      const initialCount = hooksManager.getAllHooks().filter(h => h.type === 'error').length;
+      const initialCount = hooksManager.getAllHooks().filter((h) => h.type === 'error').length;
       hooksManager.registerHook(testHook);
-      const finalCount = hooksManager.getAllHooks().filter(h => h.type === 'error').length;
+      const finalCount = hooksManager.getAllHooks().filter((h) => h.type === 'error').length;
 
       expect(finalCount).toBe(initialCount + 1);
       expect(hooksManager.getAllHooks()).toContain(testHook);
@@ -133,9 +136,9 @@ describe('HooksManager', () => {
       hooksManager.registerHook(hook1);
       hooksManager.registerHook(hook2);
 
-      const requestHooks = hooksManager.getAllHooks().filter(h => h.type === 'request');
-      const hook1Index = requestHooks.findIndex(h => h.name === 'test-hook-1');
-      const hook2Index = requestHooks.findIndex(h => h.name === 'test-hook-2');
+      const requestHooks = hooksManager.getAllHooks().filter((h) => h.type === 'request');
+      const hook1Index = requestHooks.findIndex((h) => h.name === 'test-hook-1');
+      const hook2Index = requestHooks.findIndex((h) => h.name === 'test-hook-2');
 
       expect(hook2Index).toBeLessThan(hook1Index); // Lower priority executes first
     });
@@ -247,7 +250,9 @@ describe('HooksManager', () => {
       hooksManager.registerHook(hook);
 
       const request = { method: 'test' };
-      await expect(hooksManager.processRequest(request, mockContext)).rejects.toThrow('Critical hook failed');
+      await expect(hooksManager.processRequest(request, mockContext)).rejects.toThrow(
+        'Critical hook failed',
+      );
     });
 
     it('should preserve original request when hook returns undefined', async () => {
@@ -360,7 +365,9 @@ describe('HooksManager', () => {
 
       const response = { data: 'test' };
       const request = { method: 'test' };
-      await expect(hooksManager.processResponse(response, request, mockContext)).rejects.toThrow('Critical hook failed');
+      await expect(hooksManager.processResponse(response, request, mockContext)).rejects.toThrow(
+        'Critical hook failed',
+      );
     });
   });
 
@@ -493,7 +500,7 @@ describe('HooksManager', () => {
 
         // The logger is mocked at module level, so just verify the hook exists and runs
         const hooks = hooksManager.getAllHooks();
-        const loggerHook = hooks.find(h => h.name === 'request-logger');
+        const loggerHook = hooks.find((h) => h.name === 'request-logger');
         expect(loggerHook).toBeDefined();
         expect(loggerHook?.type).toBe('request');
       });
@@ -523,7 +530,7 @@ describe('HooksManager', () => {
         const result = await hooksManager.processError(originalError, request, mockContext);
 
         expect(result.message).toBe('Test error');
-        expect((result as any).context).toMatchObject({
+        expect((result as unknown as { context: unknown }).context).toMatchObject({
           method: 'test-method',
           sessionId: 'test-session-123',
           timestamp: expect.any(String),
@@ -573,8 +580,9 @@ describe('HooksManager', () => {
         expect(successCount).toBe(30);
 
         // 31st request should fail with rate limit error
-        await expect(freshHooksManager.processRequest(request, testContext))
-          .rejects.toThrow('Rate limit exceeded');
+        await expect(freshHooksManager.processRequest(request, testContext)).rejects.toThrow(
+          'Rate limit exceeded',
+        );
       });
 
       it('should reset rate limit after window expires', async () => {
@@ -694,10 +702,7 @@ describe('HooksManager', () => {
       });
 
       expect(hook1.execute).toHaveBeenCalledWith(request, mockContext);
-      expect(hook2.execute).toHaveBeenCalledWith(
-        { method: 'test', field1: 'added' },
-        mockContext
-      );
+      expect(hook2.execute).toHaveBeenCalledWith({ method: 'test', field1: 'added' }, mockContext);
     });
   });
 });

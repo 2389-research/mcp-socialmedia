@@ -1,8 +1,8 @@
 // ABOUTME: Comprehensive MCP SSE/HTTP integration test suite
 // ABOUTME: Tests all transport modes, protocols, and newly implemented features
 
-import http from 'http';
-import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
+import http from 'node:http';
+import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
 
 // Use Node.js built-in fetch (available in Node 18+)
 const fetch = globalThis.fetch;
@@ -20,17 +20,21 @@ class McpSseClient {
     this.baseUrl = baseUrl;
     this.session = {
       sessionId: `test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      initialized: false
+      initialized: false,
     };
   }
 
-  async makeRequest(method: string, params: any = {}, id: number = 1): Promise<any> {
+  async makeRequest(
+    method: string,
+    params: Record<string, unknown> = {},
+    id = 1,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const data = JSON.stringify({
         jsonrpc: '2.0',
         id,
         method,
-        params
+        params,
       });
 
       const url = new URL('/mcp', this.baseUrl);
@@ -41,10 +45,10 @@ class McpSseClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json, text/event-stream',
+          Accept: 'application/json, text/event-stream',
           'Mcp-Session-Id': this.session.sessionId,
-          'Content-Length': Buffer.byteLength(data)
-        }
+          'Content-Length': Buffer.byteLength(data),
+        },
       };
 
       const req = http.request(options, (res) => {
@@ -61,12 +65,12 @@ class McpSseClient {
           }
 
           try {
-            let responseData;
+            let responseData: unknown;
 
             // Handle SSE format
             if (body.startsWith('event:')) {
               const lines = body.split('\n');
-              const dataLine = lines.find(line => line.startsWith('data:'));
+              const dataLine = lines.find((line) => line.startsWith('data:'));
               if (dataLine) {
                 responseData = JSON.parse(dataLine.substring(5));
               } else {
@@ -79,14 +83,14 @@ class McpSseClient {
 
             if (responseData.error) {
               const error = new Error(responseData.error.message);
-              (error as any).code = responseData.error.code;
-              (error as any).data = responseData.error.data;
+              (error as unknown as { code: unknown; data: unknown }).code = responseData.error.code;
+              (error as unknown as { code: unknown; data: unknown }).data = responseData.error.data;
               reject(error);
             } else {
               resolve({
                 status: res.statusCode,
                 headers: res.headers,
-                data: responseData
+                data: responseData,
               });
             }
           } catch (error) {
@@ -108,12 +112,12 @@ class McpSseClient {
         tools: {},
         resources: {},
         prompts: {},
-        sampling: {}
+        sampling: {},
       },
       clientInfo: {
         name: 'mcp-integration-test',
-        version: '1.0.3'
-      }
+        version: '1.0.3',
+      },
     });
 
     expect(response.status).toBe(200);
@@ -130,7 +134,7 @@ async function isServerRunning(url: string): Promise<boolean> {
     const response = await fetch(`${url}/mcp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}'
+      body: '{}',
     });
     return response.status !== undefined;
   } catch {
@@ -140,7 +144,7 @@ async function isServerRunning(url: string): Promise<boolean> {
 
 describe('MCP SSE Integration Tests', () => {
   let client: McpSseClient;
-  let serverRunning: boolean = false;
+  let serverRunning = false;
 
   beforeAll(async () => {
     const testUrl = process.env.TEST_URL || 'http://localhost:3000';
@@ -149,17 +153,18 @@ describe('MCP SSE Integration Tests', () => {
     if (serverRunning) {
       client = new McpSseClient(testUrl);
       // Wait a bit for server to be fully ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log('✅ Using existing server on', testUrl);
     } else {
       // If TEST_SERVER_AUTO_START is set, these tests should always run
       if (process.env.TEST_SERVER_AUTO_START === 'true') {
-        throw new Error(`❌ Expected server to be running on ${testUrl} but it's not available. Check test setup.`);
-      } else {
-        console.warn('⚠️  HTTP MCP server not running on', testUrl);
-        console.warn('   To run these tests, start the server with: npm run start:http');
-        console.warn('   Or use the full integration script: npm run test:integration');
+        throw new Error(
+          `❌ Expected server to be running on ${testUrl} but it's not available. Check test setup.`,
+        );
       }
+      console.warn('⚠️  HTTP MCP server not running on', testUrl);
+      console.warn('   To run these tests, start the server with: npm run start:http');
+      console.warn('   Or use the full integration script: npm run test:integration');
     }
   });
 
@@ -178,7 +183,7 @@ describe('MCP SSE Integration Tests', () => {
       }
 
       await client.initialize();
-      expect(client['session'].initialized).toBe(true);
+      expect(client.session.initialized).toBe(true);
     });
 
     test('should fail requests before initialization when server is running', async () => {
@@ -188,9 +193,7 @@ describe('MCP SSE Integration Tests', () => {
       }
 
       const uninitializedClient = new McpSseClient();
-      await expect(
-        uninitializedClient.makeRequest('tools/list')
-      ).rejects.toThrow();
+      await expect(uninitializedClient.makeRequest('tools/list')).rejects.toThrow();
     });
   });
 
@@ -219,7 +222,7 @@ describe('MCP SSE Integration Tests', () => {
       }
 
       // Make sure client is initialized first
-      if (!client['session'].initialized) {
+      if (!client.session.initialized) {
         await client.initialize();
       }
 
@@ -227,7 +230,7 @@ describe('MCP SSE Integration Tests', () => {
       expect(response.data.result.tools).toBeDefined();
       expect(Array.isArray(response.data.result.tools)).toBe(true);
 
-      const toolNames = response.data.result.tools.map((t: any) => t.name);
+      const toolNames = response.data.result.tools.map((t: { name: string }) => t.name);
       expect(toolNames).toContain('login');
       expect(toolNames).toContain('create_post');
       expect(toolNames).toContain('read_posts');
@@ -243,7 +246,7 @@ describe('MCP SSE Integration Tests', () => {
       }
 
       // Make sure client is initialized first
-      if (!client['session'].initialized) {
+      if (!client.session.initialized) {
         await client.initialize();
       }
 
@@ -251,7 +254,7 @@ describe('MCP SSE Integration Tests', () => {
       expect(response.data.result.resources).toBeDefined();
       expect(Array.isArray(response.data.result.resources)).toBe(true);
 
-      const resourceUris = response.data.result.resources.map((r: any) => r.uri);
+      const resourceUris = response.data.result.resources.map((r: { uri: string }) => r.uri);
       expect(resourceUris).toContain('social://feed');
       expect(resourceUris).toContain('social://notifications');
       expect(resourceUris).toContain('social://roots');

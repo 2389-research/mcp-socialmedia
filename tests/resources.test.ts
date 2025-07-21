@@ -1,8 +1,8 @@
 // ABOUTME: Unit tests for resource handlers and registration
 // ABOUTME: Tests all resource types including posts, agents, feed, and notifications
 
-import { jest } from '@jest/globals';
 import { URL } from 'node:url';
+import { jest } from '@jest/globals';
 
 // Mock logger
 jest.mock('../src/logger.js', () => ({
@@ -31,21 +31,26 @@ jest.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   ResourceTemplate: mockResourceTemplate,
 }));
 
-import { registerResources, listResources, type ResourceContext } from '../src/resources/index.js';
-import { readPostResource, readThreadResource } from '../src/resources/posts.js';
-import { readAgentProfileResource, readAgentPostsResource } from '../src/resources/agents.js';
-import { readFeedResource, readNotificationsResource } from '../src/resources/feed.js';
-import type { IApiClient } from '../src/api-client.js';
-import type { SessionManager } from '../src/session-manager.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
-import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
+import type { IApiClient } from '../src/api-client.js';
+import { readAgentPostsResource, readAgentProfileResource } from '../src/resources/agents.js';
+import { readFeedResource, readNotificationsResource } from '../src/resources/feed.js';
+import { type ResourceContext, listResources, registerResources } from '../src/resources/index.js';
+import { readPostResource, readThreadResource } from '../src/resources/posts.js';
+import type { SessionManager } from '../src/session-manager.js';
+
+// Test type interfaces
+interface MockServer {
+  resource: jest.MockedFunction<(...args: any[]) => any>;
+}
 
 describe('Resource Handlers', () => {
   let mockApiClient: jest.Mocked<IApiClient>;
   let mockSessionManager: jest.Mocked<SessionManager>;
   let mockContext: ResourceContext;
   let mockExtra: RequestHandlerExtra<ServerRequest, ServerNotification>;
-  let mockServer: any;
+  let mockServer: MockServer;
 
   const mockPosts = [
     {
@@ -90,13 +95,15 @@ describe('Resource Handlers', () => {
       fetchPosts: jest.fn(),
       createPost: jest.fn(),
       deletePost: jest.fn(),
-    } as any;
+    } as jest.Mocked<IApiClient>;
 
     mockSessionManager = {
       getSession: jest.fn(),
       createSession: jest.fn(),
       destroySession: jest.fn(),
-    } as any;
+    } as jest.Mocked<Pick<SessionManager, 'getSession' | 'createSession'>> & {
+      destroySession: jest.MockedFunction<(...args: any[]) => any>;
+    };
 
     mockContext = {
       apiClient: mockApiClient,
@@ -105,27 +112,27 @@ describe('Resource Handlers', () => {
 
     mockExtra = {
       signal: new AbortController().signal,
-    } as any;
+    } as RequestHandlerExtra<ServerRequest, ServerNotification>;
 
     mockServer = {
       resource: jest.fn(),
     };
 
     // Default posts mock - setup to match different filter scenarios
-    mockApiClient.fetchPosts.mockImplementation((teamName, options = {}) => {
+    mockApiClient.fetchPosts.mockImplementation((_teamName, options = {}) => {
       let filteredPosts = [...mockPosts];
 
       // Only apply filters when they are explicitly provided
       if (options.agent_filter) {
-        filteredPosts = filteredPosts.filter(p => p.author_name === options.agent_filter);
+        filteredPosts = filteredPosts.filter((p) => p.author_name === options.agent_filter);
       }
 
       if (options.thread_id) {
-        filteredPosts = filteredPosts.filter(p => p.thread_id === options.thread_id);
+        filteredPosts = filteredPosts.filter((p) => p.thread_id === options.thread_id);
       }
 
       if (options.tag_filter) {
-        filteredPosts = filteredPosts.filter(p => p.tags?.includes(options.tag_filter));
+        filteredPosts = filteredPosts.filter((p) => p.tags?.includes(options.tag_filter));
       }
 
       // For posts without specific filters, return all posts (like readPostResource does)
@@ -155,7 +162,7 @@ describe('Resource Handlers', () => {
       expect(mockServer.resource).toHaveBeenCalledTimes(6);
 
       const calls = mockServer.resource.mock.calls;
-      const resourceNames = calls.map(call => call[0]);
+      const resourceNames = calls.map((call) => call[0]);
 
       expect(resourceNames).toContain('social-feed');
       expect(resourceNames).toContain('notifications');
@@ -168,17 +175,19 @@ describe('Resource Handlers', () => {
     it('should register fixed URI resources with correct URIs', () => {
       registerResources(mockServer, mockContext);
 
-      const feedCall = mockServer.resource.mock.calls.find(call => call[0] === 'social-feed');
+      const feedCall = mockServer.resource.mock.calls.find((call) => call[0] === 'social-feed');
       expect(feedCall[1]).toBe('social://feed');
 
-      const notificationsCall = mockServer.resource.mock.calls.find(call => call[0] === 'notifications');
+      const notificationsCall = mockServer.resource.mock.calls.find(
+        (call) => call[0] === 'notifications',
+      );
       expect(notificationsCall[1]).toBe('social://notifications');
     });
 
     it('should register template resources with ResourceTemplate instances', () => {
       registerResources(mockServer, mockContext);
 
-      const postCall = mockServer.resource.mock.calls.find(call => call[0] === 'post');
+      const postCall = mockServer.resource.mock.calls.find((call) => call[0] === 'post');
       expect(postCall[1]).toBeInstanceOf(Object);
       expect(postCall[1]).toHaveProperty('_uriTemplate');
     });
@@ -186,7 +195,7 @@ describe('Resource Handlers', () => {
     it('should register resources with correct metadata', () => {
       registerResources(mockServer, mockContext);
 
-      const feedCall = mockServer.resource.mock.calls.find(call => call[0] === 'social-feed');
+      const feedCall = mockServer.resource.mock.calls.find((call) => call[0] === 'social-feed');
       expect(feedCall[2].description).toContain('Real-time social media feed');
       expect(feedCall[2].mimeType).toBe('application/json');
     });
@@ -208,35 +217,35 @@ describe('Resource Handlers', () => {
             name: 'Notifications',
             mimeType: 'application/json',
           }),
-        ])
+        ]),
       );
     });
 
     it('should include dynamic post resources', async () => {
       const result = await listResources(mockExtra, mockContext);
 
-      const postResources = result.resources.filter(r => r.uri.startsWith('social://posts/'));
+      const postResources = result.resources.filter((r) => r.uri.startsWith('social://posts/'));
       expect(postResources.length).toBeGreaterThan(0);
       expect(postResources[0]).toEqual(
         expect.objectContaining({
           uri: 'social://posts/post-123',
           name: 'Post by agent1',
           mimeType: 'application/json',
-        })
+        }),
       );
     });
 
     it('should include dynamic agent profile resources', async () => {
       const result = await listResources(mockExtra, mockContext);
 
-      const agentResources = result.resources.filter(r => r.uri.includes('/agents/'));
+      const agentResources = result.resources.filter((r) => r.uri.includes('/agents/'));
       expect(agentResources.length).toBeGreaterThan(0);
       expect(agentResources[0]).toEqual(
         expect.objectContaining({
           uri: expect.stringMatching(/^social:\/\/agents\/agent[12]\/profile$/),
           name: expect.stringMatching(/^agent[12]'s Profile$/),
           mimeType: 'application/json',
-        })
+        }),
       );
     });
 
@@ -250,16 +259,18 @@ describe('Resource Handlers', () => {
         expect.arrayContaining([
           expect.objectContaining({ uri: 'social://feed' }),
           expect.objectContaining({ uri: 'social://notifications' }),
-        ])
+        ]),
       );
     });
 
     it('should limit dynamic resources to avoid overwhelming list', async () => {
-      const largeMockPosts = Array(20).fill(0).map((_, i) => ({
-        ...mockPosts[0],
-        id: `post-${i}`,
-        author_name: `agent-${i}`,
-      }));
+      const largeMockPosts = Array(20)
+        .fill(0)
+        .map((_, i) => ({
+          ...mockPosts[0],
+          id: `post-${i}`,
+          author_name: `agent-${i}`,
+        }));
 
       mockApiClient.fetchPosts.mockResolvedValue({
         posts: largeMockPosts,
@@ -268,8 +279,8 @@ describe('Resource Handlers', () => {
 
       const result = await listResources(mockExtra, mockContext);
 
-      const postResources = result.resources.filter(r => r.uri.startsWith('social://posts/'));
-      const agentResources = result.resources.filter(r => r.uri.includes('/agents/'));
+      const postResources = result.resources.filter((r) => r.uri.startsWith('social://posts/'));
+      const agentResources = result.resources.filter((r) => r.uri.includes('/agents/'));
 
       // Should limit to 3 posts and 3 agents
       expect(postResources.length).toBe(3);
@@ -292,7 +303,7 @@ describe('Resource Handlers', () => {
             id: 'post-123',
             author_name: 'agent1',
             content: 'This is a test post about AI development',
-          })
+          }),
         );
       });
 
@@ -349,7 +360,7 @@ describe('Resource Handlers', () => {
             ]),
             participantCount: 1,
             postCount: 2,
-          })
+          }),
         );
       });
 
@@ -370,7 +381,9 @@ describe('Resource Handlers', () => {
         const content = JSON.parse(result.contents[0].text);
         const posts = content.thread.posts;
 
-        expect(new Date(posts[0].created_at).getTime()).toBeLessThanOrEqual(new Date(posts[1].created_at).getTime());
+        expect(new Date(posts[0].created_at).getTime()).toBeLessThanOrEqual(
+          new Date(posts[1].created_at).getTime(),
+        );
       });
 
       it('should include thread statistics', async () => {
@@ -399,7 +412,7 @@ describe('Resource Handlers', () => {
             postCount: 2,
             firstSeenAt: expect.any(String),
             lastSeenAt: expect.any(String),
-          })
+          }),
         );
       });
 
@@ -479,7 +492,7 @@ describe('Resource Handlers', () => {
                 expect.objectContaining({ id: 'post-789' }),
               ]),
               lastUpdated: expect.any(Number),
-            })
+            }),
           );
         }
       });
@@ -566,10 +579,8 @@ describe('Resource Handlers', () => {
     });
 
     it('should handle API timeouts', async () => {
-      mockApiClient.fetchPosts.mockImplementation(() =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 100)
-        )
+      mockApiClient.fetchPosts.mockImplementation(
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 100)),
       );
 
       const uri = new URL('social://feed');
@@ -635,22 +646,28 @@ describe('Resource Handlers', () => {
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(3);
-      results.forEach(result => {
+      for (const result of results) {
         expect(result.contents).toHaveLength(1);
         expect(result.contents[0].mimeType).toBe('application/json');
-      });
+      }
     });
 
     it('should maintain consistent data across related resources', async () => {
       // Read post and its thread
-      const postResult = await readPostResource(new URL('social://host//posts/post-123'), mockContext);
-      const threadResult = await readThreadResource(new URL('social://host//threads/thread-456'), mockContext);
+      const postResult = await readPostResource(
+        new URL('social://host//posts/post-123'),
+        mockContext,
+      );
+      const threadResult = await readThreadResource(
+        new URL('social://host//threads/thread-456'),
+        mockContext,
+      );
 
       const postContent = JSON.parse(postResult.contents[0].text);
       const threadContent = JSON.parse(threadResult.contents[0].text);
 
       // Post should be included in its thread
-      const postInThread = threadContent.thread.posts.find(p => p.id === 'post-123');
+      const postInThread = threadContent.thread.posts.find((p) => p.id === 'post-123');
       expect(postInThread).toBeDefined();
       expect(postInThread.content).toBe(postContent.post.content);
     });

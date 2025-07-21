@@ -2,7 +2,7 @@
 // ABOUTME: Validates environment variable loading and config validation
 
 import { jest } from '@jest/globals';
-import { validateConfig, getConfig } from '../src/config';
+import { getConfig, validateConfig } from '../src/config';
 
 describe('Config', () => {
   const originalEnv = process.env;
@@ -26,7 +26,7 @@ describe('Config', () => {
     });
 
     it('should throw error for missing SOCIALMEDIA_API_BASE_URL', () => {
-      delete process.env.SOCIALMEDIA_API_BASE_URL;
+      process.env.SOCIALMEDIA_API_BASE_URL = undefined;
       process.env.SOCIALMEDIA_API_KEY = 'test-key';
       process.env.SOCIALMEDIA_TEAM_ID = 'test-team';
 
@@ -35,7 +35,7 @@ describe('Config', () => {
 
     it('should throw error for missing SOCIALMEDIA_API_KEY', () => {
       process.env.SOCIALMEDIA_API_BASE_URL = 'https://api.example.com';
-      delete process.env.SOCIALMEDIA_API_KEY;
+      process.env.SOCIALMEDIA_API_KEY = undefined;
       process.env.SOCIALMEDIA_TEAM_ID = 'test-team';
 
       expect(() => validateConfig()).toThrow(/SOCIALMEDIA_API_KEY/);
@@ -44,7 +44,7 @@ describe('Config', () => {
     it('should throw error for missing SOCIALMEDIA_TEAM_ID', () => {
       process.env.SOCIALMEDIA_API_BASE_URL = 'https://api.example.com';
       process.env.SOCIALMEDIA_API_KEY = 'test-key';
-      delete process.env.SOCIALMEDIA_TEAM_ID;
+      process.env.SOCIALMEDIA_TEAM_ID = undefined;
 
       expect(() => validateConfig()).toThrow(/SOCIALMEDIA_TEAM_ID/);
     });
@@ -62,7 +62,7 @@ describe('Config', () => {
       process.env.SOCIALMEDIA_API_BASE_URL = 'https://api.example.com';
       process.env.SOCIALMEDIA_API_KEY = 'test-key';
       process.env.SOCIALMEDIA_TEAM_ID = 'test-team';
-      delete process.env.PORT;
+      process.env.PORT = undefined;
 
       const config = getConfig();
       expect(config.port).toBe(3000);
@@ -72,7 +72,7 @@ describe('Config', () => {
       process.env.SOCIALMEDIA_API_BASE_URL = 'https://api.example.com';
       process.env.SOCIALMEDIA_API_KEY = 'test-key';
       process.env.SOCIALMEDIA_TEAM_ID = 'test-team';
-      delete process.env.LOG_LEVEL;
+      process.env.LOG_LEVEL = undefined;
 
       const config = getConfig();
       expect(config.logLevel).toBe('info');

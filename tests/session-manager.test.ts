@@ -253,7 +253,9 @@ describe('SessionManager', () => {
 
       // Mock the acquireLock method to throw an error
       const originalAcquireLock = (sessionManager as any).acquireLock;
-      (sessionManager as any).acquireLock = jest.fn().mockRejectedValue(new Error('Lock acquisition failed'));
+      (sessionManager as any).acquireLock = jest
+        .fn()
+        .mockRejectedValue(new Error('Lock acquisition failed'));
 
       // This should fallback to non-locking operation
       const session = await sessionManager.createSession('test-session', 'test-agent');

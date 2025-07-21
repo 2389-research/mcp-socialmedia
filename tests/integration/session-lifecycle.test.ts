@@ -1,13 +1,13 @@
 // ABOUTME: Integration tests for session lifecycle management
 // ABOUTME: Tests session creation, validation, cleanup, and edge cases
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { SessionManager } from '../../src/session-manager.js';
-import { ApiClient } from '../../src/api-client.js';
-import { loginToolHandler } from '../../src/tools/login.js';
-import { createPostToolHandler } from '../../src/tools/create-post.js';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import type { ApiClient } from '../../src/api-client.js';
 import { logger } from '../../src/logger.js';
 import { metrics } from '../../src/metrics.js';
+import { SessionManager } from '../../src/session-manager.js';
+import { createPostToolHandler } from '../../src/tools/create-post.js';
+import { loginToolHandler } from '../../src/tools/login.js';
 
 describe('Session Lifecycle Integration Tests', () => {
   let sessionManager: SessionManager;
@@ -76,7 +76,7 @@ describe('Session Lifecycle Integration Tests', () => {
 
       const createResult = await createPostToolHandler(
         { content: 'Authenticated post' },
-        createContext
+        createContext,
       );
 
       const createResponse = JSON.parse(createResult.content[0].text);
@@ -90,7 +90,7 @@ describe('Session Lifecycle Integration Tests', () => {
       // Operations fail after session deletion
       const postDeleteResult = await createPostToolHandler(
         { content: 'Should fail' },
-        createContext
+        createContext,
       );
 
       const postDeleteResponse = JSON.parse(postDeleteResult.content[0].text);
@@ -149,7 +149,7 @@ describe('Session Lifecycle Integration Tests', () => {
 
         const result = await createPostToolHandler(
           { content: `Post from ${agents[i]}` },
-          createContext
+          createContext,
         );
 
         const response = JSON.parse(result.content[0].text);
@@ -215,7 +215,7 @@ describe('Session Lifecycle Integration Tests', () => {
 
       const alicePost = await createPostToolHandler(
         { content: 'Alice private post' },
-        aliceCreateContext
+        aliceCreateContext,
       );
 
       const aliceResponse = JSON.parse(alicePost.content[0].text);
@@ -231,7 +231,7 @@ describe('Session Lifecycle Integration Tests', () => {
       // This would succeed but the post would be from Alice
       const bobPost = await createPostToolHandler(
         { content: 'Bob trying with Alice session' },
-        bobWithAliceContext
+        bobWithAliceContext,
       );
 
       const bobResponse = JSON.parse(bobPost.content[0].text);

@@ -1,22 +1,28 @@
 // ABOUTME: End-to-end integration tests for complete workflows
 // ABOUTME: Tests full agent interactions including login, posting, and replies
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SessionManager } from '../../src/session-manager.js';
-import { ApiClient } from '../../src/api-client.js';
-import { loginToolHandler } from '../../src/tools/login.js';
-import { readPostsToolHandler } from '../../src/tools/read-posts.js';
-import { createPostToolHandler } from '../../src/tools/create-post.js';
+import type { ApiClient } from '../../src/api-client.js';
+import { config } from '../../src/config.js';
 import { logger } from '../../src/logger.js';
 import { metrics } from '../../src/metrics.js';
-import { config } from '../../src/config.js';
+import { SessionManager } from '../../src/session-manager.js';
+import { createPostToolHandler } from '../../src/tools/create-post.js';
+import { loginToolHandler } from '../../src/tools/login.js';
+import { readPostsToolHandler } from '../../src/tools/read-posts.js';
 
 describe('End-to-End Integration Tests', () => {
   let sessionManager: SessionManager;
   let apiClient: jest.Mocked<ApiClient>;
   let sessionId: string;
-  let mockPosts: any[];
+  let mockPosts: Array<{
+    id: string;
+    content: string;
+    author_name: string;
+    timestamp: string;
+    thread_id?: string;
+  }>;
   let postIdCounter: number;
   let networkFailure: boolean;
 
@@ -38,7 +44,7 @@ describe('End-to-End Integration Tests', () => {
     } as jest.Mocked<ApiClient>;
 
     // Set up mock responses that simulate a real API with persistent state
-    apiClient.fetchPosts.mockImplementation(async (teamName, options) => {
+    apiClient.fetchPosts.mockImplementation(async (_teamName, options) => {
       if (networkFailure) {
         throw new Error('Network error during validation');
       }
@@ -55,7 +61,7 @@ describe('End-to-End Integration Tests', () => {
       if (options?.thread_id) {
         // Include the thread root and all replies
         filteredPosts = filteredPosts.filter(
-          (p) => p.id === options.thread_id || p.parent_post_id === options.thread_id
+          (p) => p.id === options.thread_id || p.parent_post_id === options.thread_id,
         );
       }
 
@@ -144,7 +150,7 @@ describe('End-to-End Integration Tests', () => {
           content: 'Integration test post',
           tags: ['test', 'integration'],
         },
-        createContext
+        createContext,
       );
 
       const createResponse = JSON.parse(createResult.content[0].text);
@@ -160,7 +166,7 @@ describe('End-to-End Integration Tests', () => {
       expect(updatedPosts.posts.length).toBe(initialPostCount + 1);
 
       // Verify our post is in the feed
-      const ourPost = updatedPosts.posts.find((p: any) => p.id === newPostId);
+      const ourPost = updatedPosts.posts.find((p: { id: string }) => p.id === newPostId);
       expect(ourPost).toBeDefined();
       expect(ourPost.content).toBe('Integration test post');
       expect(ourPost.author_name).toBe('test-agent');
@@ -199,7 +205,7 @@ describe('End-to-End Integration Tests', () => {
 
       const readResult = await readPostsToolHandler({}, readContext);
       const posts = JSON.parse(readResult.content[0].text);
-      const foundParent = posts.posts.find((p: any) => p.id === parentPost.id);
+      const foundParent = posts.posts.find((p: { id: string }) => p.id === parentPost.id);
       expect(foundParent).toBeDefined();
 
       // Step 3: Create reply
@@ -214,7 +220,7 @@ describe('End-to-End Integration Tests', () => {
           content: 'This is a reply to the parent post',
           parent_post_id: parentPost.id,
         },
-        createContext
+        createContext,
       );
 
       const replyResponse = JSON.parse(replyResult.content[0].text);
@@ -229,8 +235,8 @@ describe('End-to-End Integration Tests', () => {
       expect(threadPosts.posts.length).toBeGreaterThanOrEqual(2);
 
       // Should include both parent and reply
-      const hasParent = threadPosts.posts.some((p: any) => p.id === parentPost.id);
-      const hasReply = threadPosts.posts.some((p: any) => p.id === replyId);
+      const hasParent = threadPosts.posts.some((p: { id: string }) => p.id === parentPost.id);
+      const hasReply = threadPosts.posts.some((p: { id: string }) => p.id === replyId);
       expect(hasParent).toBe(true);
       expect(hasReply).toBe(true);
 
@@ -328,7 +334,7 @@ describe('End-to-End Integration Tests', () => {
             content: `Post from ${agent}`,
             tags: [agent, 'multi-agent-test'],
           },
-          createContext
+          createContext,
         );
 
         const response = JSON.parse(result.content[0].text);
@@ -347,7 +353,9 @@ describe('End-to-End Integration Tests', () => {
         const result = await readPostsToolHandler({ agent_filter: agent }, readContext);
 
         const response = JSON.parse(result.content[0].text);
-        const agentPosts = response.posts.filter((p: any) => p.author_name === agent);
+        const agentPosts = response.posts.filter(
+          (p: { author_name: string }) => p.author_name === agent,
+        );
         expect(agentPosts.length).toBeGreaterThanOrEqual(1);
         logger.debug(`Found ${agentPosts.length} posts by ${agent}`);
       }
@@ -367,7 +375,7 @@ describe('End-to-End Integration Tests', () => {
           content: 'Reply from Bob to Alice',
           parent_post_id: alicePost,
         },
-        bobReplyContext
+        bobReplyContext,
       );
 
       const bobReplyResponse = JSON.parse(bobReply.content[0].text);
@@ -385,7 +393,7 @@ describe('End-to-End Integration Tests', () => {
           content: 'Reply from Charlie to Bob',
           parent_post_id: bobReplyResponse.post.id,
         },
-        charlieReplyContext
+        charlieReplyContext,
       );
 
       const charlieReplyResponse = JSON.parse(charlieReply.content[0].text);
@@ -432,15 +440,15 @@ describe('End-to-End Integration Tests', () => {
       // Check metrics
       const loginMetrics = metrics.getOperationMetrics('login');
       expect(loginMetrics).toBeDefined();
-      expect(loginMetrics!.count).toBe(1);
-      expect(loginMetrics!.errors).toBe(0);
+      expect(loginMetrics?.count).toBe(1);
+      expect(loginMetrics?.errors).toBe(0);
 
       const systemMetrics = metrics.getSystemMetrics();
       expect(systemMetrics.uptime).toBeGreaterThanOrEqual(0);
       expect(systemMetrics.memoryUsage).toBeDefined();
       expect(systemMetrics.memoryUsage.rss).toBeGreaterThan(0);
 
-      logger.info('Metrics summary:\n' + metrics.getSummary());
+      logger.info(`Metrics summary:\n${metrics.getSummary()}`);
     });
   });
 });

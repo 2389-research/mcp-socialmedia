@@ -2,10 +2,10 @@
 // ABOUTME: Validates input validation, session creation, and error handling
 
 import { jest } from '@jest/globals';
-import { loginToolHandler, LoginToolContext } from '../../src/tools/login';
-import { SessionManager } from '../../src/session-manager';
-import { LoginToolResponse } from '../../src/types';
 import { config } from '../../src/config';
+import { SessionManager } from '../../src/session-manager';
+import { type LoginToolContext, loginToolHandler } from '../../src/tools/login';
+import type { LoginToolResponse } from '../../src/types';
 
 describe('Login Tool', () => {
   let sessionManager: SessionManager;
@@ -39,7 +39,7 @@ describe('Login Tool', () => {
       expect(response.session_id).toBeDefined();
 
       // Verify session was created
-      const sessionId = response.session_id!;
+      const sessionId = response.session_id;
       const session = sessionManager.getSession(sessionId);
       expect(session).toBeDefined();
       expect(session?.agentName).toBe(agentName);
@@ -120,7 +120,7 @@ describe('Login Tool', () => {
     });
 
     it('should reject null agent name', async () => {
-      const result = await loginToolHandler({ agent_name: null as any }, context);
+      const result = await loginToolHandler({ agent_name: null as unknown as string }, context);
 
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);
@@ -128,7 +128,10 @@ describe('Login Tool', () => {
     });
 
     it('should reject undefined agent name', async () => {
-      const result = await loginToolHandler({ agent_name: undefined as any }, context);
+      const result = await loginToolHandler(
+        { agent_name: undefined as unknown as string },
+        context,
+      );
 
       const response: LoginToolResponse = JSON.parse(result.content[0].text);
       expect(response.success).toBe(false);

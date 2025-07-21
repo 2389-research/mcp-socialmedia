@@ -4,14 +4,14 @@
 import { jest } from '@jest/globals';
 
 import {
-  ValidationResult,
   ValidationError,
-  validateString,
-  validateNumber,
+  ValidationResult,
   validateArray,
-  validateLoginInput,
-  validateReadPostsInput,
   validateCreatePostInput,
+  validateLoginInput,
+  validateNumber,
+  validateReadPostsInput,
+  validateString,
 } from '../src/validation.js';
 
 describe('ValidationResult', () => {
@@ -78,10 +78,10 @@ describe('validateString', () => {
     it('should reject non-string types', () => {
       const testCases = [123, true, {}, [], () => {}];
 
-      testCases.forEach(value => {
+      for (const value of testCases) {
         const errors = validateString(value, 'name');
         expect(errors).toEqual([{ field: 'name', message: 'name must be a string' }]);
-      });
+      }
     });
   });
 
@@ -191,19 +191,19 @@ describe('validateNumber', () => {
     it('should reject non-number types', () => {
       const testCases = ['123', true, {}, [], () => {}];
 
-      testCases.forEach(value => {
+      for (const value of testCases) {
         const errors = validateNumber(value, 'age');
         expect(errors).toEqual([{ field: 'age', message: 'age must be a number' }]);
-      });
+      }
     });
 
     it('should reject NaN', () => {
-      const errors = validateNumber(NaN, 'age');
+      const errors = validateNumber(Number.NaN, 'age');
       expect(errors).toEqual([{ field: 'age', message: 'age must be a number' }]);
     });
 
     it('should validate Infinity', () => {
-      const errors = validateNumber(Infinity, 'value');
+      const errors = validateNumber(Number.POSITIVE_INFINITY, 'value');
       expect(errors).toEqual([]);
     });
   });
@@ -283,10 +283,10 @@ describe('validateArray', () => {
     it('should reject non-array types', () => {
       const testCases = ['array', 123, true, {}, () => {}];
 
-      testCases.forEach(value => {
+      for (const value of testCases) {
         const errors = validateArray(value, 'items');
         expect(errors).toEqual([{ field: 'items', message: 'items must be an array' }]);
-      });
+      }
     });
   });
 
@@ -312,10 +312,12 @@ describe('validateArray', () => {
       };
 
       const errors = validateArray(['a', 123, 'c'], 'tags', { itemValidator });
-      expect(errors).toEqual([{
-        field: 'tags[1].item',
-        message: 'item 1 must be string',
-      }]);
+      expect(errors).toEqual([
+        {
+          field: 'tags[1].item',
+          message: 'item 1 must be string',
+        },
+      ]);
     });
 
     it('should handle multiple item errors', () => {
@@ -336,22 +338,19 @@ describe('validateArray', () => {
     });
 
     it('should handle complex item validation', () => {
-      const itemValidator = (item: any) => {
+      const itemValidator = (item: unknown) => {
         const errors = [];
-        if (!item.name) {
+        const itemObj = item as { name?: string; age?: unknown };
+        if (!itemObj.name) {
           errors.push({ field: 'name', message: 'name required' });
         }
-        if (item.age !== undefined && typeof item.age !== 'number') {
+        if (itemObj.age !== undefined && typeof itemObj.age !== 'number') {
           errors.push({ field: 'age', message: 'age must be number' });
         }
         return errors;
       };
 
-      const items = [
-        { name: 'John', age: 25 },
-        { name: '', age: 'old' },
-        { age: 30 },
-      ];
+      const items = [{ name: 'John', age: 25 }, { name: '', age: 'old' }, { age: 30 }];
 
       const errors = validateArray(items, 'people', { itemValidator });
       expect(errors).toEqual([
@@ -413,38 +412,48 @@ describe('validateLoginInput', () => {
       const result = validateLoginInput({});
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual([{ field: 'agent_name', message: 'Agent name must not be empty' }]);
+      expect(result.errors).toEqual([
+        { field: 'agent_name', message: 'Agent name must not be empty' },
+      ]);
     });
 
     it('should reject null agent name', () => {
       const result = validateLoginInput({ agent_name: null });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual([{ field: 'agent_name', message: 'Agent name must not be empty' }]);
+      expect(result.errors).toEqual([
+        { field: 'agent_name', message: 'Agent name must not be empty' },
+      ]);
     });
 
     it('should reject non-string agent name', () => {
       const testCases = [123, true, {}, []];
 
-      testCases.forEach(value => {
+      for (const value of testCases) {
         const result = validateLoginInput({ agent_name: value });
         expect(result.isValid).toBe(false);
-        expect(result.errors).toEqual([{ field: 'agent_name', message: 'Agent name must be a string' }]);
-      });
+        expect(result.errors).toEqual([
+          { field: 'agent_name', message: 'Agent name must be a string' },
+        ]);
+      }
     });
 
     it('should reject empty string agent name', () => {
       const result = validateLoginInput({ agent_name: '' });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual([{ field: 'agent_name', message: 'Agent name must not be empty' }]);
+      expect(result.errors).toEqual([
+        { field: 'agent_name', message: 'Agent name must not be empty' },
+      ]);
     });
 
     it('should reject whitespace-only agent name', () => {
       const result = validateLoginInput({ agent_name: '   ' });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual([{ field: 'agent_name', message: 'Agent name must not be empty' }]);
+      expect(result.errors).toEqual([
+        { field: 'agent_name', message: 'Agent name must not be empty' },
+      ]);
     });
   });
 });
@@ -526,18 +535,21 @@ describe('validateReadPostsInput', () => {
         { limit: -5, expectedMessage: 'limit must be at least 1' },
       ];
 
-      testCases.forEach(({ limit, expectedMessage }) => {
+      for (const { limit, expectedMessage } of testCases) {
         const result = validateReadPostsInput({ limit });
         expect(result.isValid).toBe(false);
         expect(result.errors).toContainEqual({ field: 'limit', message: expectedMessage });
-      });
+      }
     });
 
     it('should reject negative offset', () => {
       const result = validateReadPostsInput({ offset: -1 });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContainEqual({ field: 'offset', message: 'offset must be at least 0' });
+      expect(result.errors).toContainEqual({
+        field: 'offset',
+        message: 'offset must be at least 0',
+      });
     });
 
     it('should reject empty filter strings', () => {
@@ -682,37 +694,49 @@ describe('validateCreatePostInput', () => {
       const result = validateCreatePostInput({});
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContainEqual({ field: 'content', message: 'Content must not be empty' });
+      expect(result.errors).toContainEqual({
+        field: 'content',
+        message: 'Content must not be empty',
+      });
     });
 
     it('should reject null/undefined content', () => {
       const testCases = [null, undefined];
 
-      testCases.forEach(content => {
+      for (const content of testCases) {
         const result = validateCreatePostInput({ content });
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContainEqual({ field: 'content', message: 'Content must not be empty' });
-      });
+        expect(result.errors).toContainEqual({
+          field: 'content',
+          message: 'Content must not be empty',
+        });
+      }
     });
 
     it('should reject non-string content', () => {
       const testCases = [123, true, {}, []];
 
-      testCases.forEach(content => {
+      for (const content of testCases) {
         const result = validateCreatePostInput({ content });
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContainEqual({ field: 'content', message: 'content must be a string' });
-      });
+        expect(result.errors).toContainEqual({
+          field: 'content',
+          message: 'content must be a string',
+        });
+      }
     });
 
     it('should reject empty/whitespace content', () => {
       const testCases = ['', '   ', '\t\n\r'];
 
-      testCases.forEach(content => {
+      for (const content of testCases) {
         const result = validateCreatePostInput({ content });
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContainEqual({ field: 'content', message: 'Content must not be empty' });
-      });
+        expect(result.errors).toContainEqual({
+          field: 'content',
+          message: 'Content must not be empty',
+        });
+      }
     });
 
     it('should reject non-array tags', () => {
@@ -741,14 +765,17 @@ describe('validateCreatePostInput', () => {
     it('should reject non-string parent_post_id', () => {
       const testCases = [123, true, {}, []];
 
-      testCases.forEach(parent_post_id => {
+      for (const parent_post_id of testCases) {
         const result = validateCreatePostInput({
           content: 'Hello',
           parent_post_id,
         });
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContainEqual({ field: 'parent_post_id', message: 'parent_post_id must be a string' });
-      });
+        expect(result.errors).toContainEqual({
+          field: 'parent_post_id',
+          message: 'parent_post_id must be a string',
+        });
+      }
     });
   });
 
@@ -772,7 +799,9 @@ describe('validateCreatePostInput', () => {
     });
 
     it('should handle many tags', () => {
-      const manyTags = Array(100).fill(0).map((_, i) => `tag${i}`);
+      const manyTags = Array(100)
+        .fill(0)
+        .map((_, i) => `tag${i}`);
       const result = validateCreatePostInput({
         content: 'Hello',
         tags: manyTags,

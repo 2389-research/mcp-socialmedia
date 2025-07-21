@@ -12,20 +12,47 @@ jest.mock('../../src/logger.js', () => ({
 }));
 
 import {
+  type ErrorContext,
   ErrorHandler,
-  McpValidationError,
   McpAuthenticationError,
+  type McpError,
+  McpMethodNotFoundError,
   McpRateLimitError,
   McpTimeoutError,
-  McpMethodNotFoundError,
-  type ErrorContext,
-  type McpError,
+  McpValidationError,
 } from '../../src/middleware/error-handler.js';
+
+// Test type interfaces
+interface MockRequest {
+  jsonrpc: string;
+  id: number;
+  method: string;
+  params: { name: string };
+}
+
+interface McpErrorWithData extends Error {
+  code: number;
+  data: {
+    originalMessage?: string;
+    details?: unknown;
+    sessionId?: string;
+    retryAfter?: number;
+    timeout?: number;
+    method?: string;
+    context?: {
+      sessionId: string;
+      requestId?: string;
+      method?: string;
+      timestamp?: string;
+      processingTime?: number;
+    };
+  };
+}
 
 describe('ErrorHandler', () => {
   let errorHandler: ErrorHandler;
   let mockContext: ErrorContext;
-  let mockRequest: any;
+  let mockRequest: MockRequest;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,7 +70,7 @@ describe('ErrorHandler', () => {
       id: 1,
       method: 'tools/call',
       params: { name: 'test-tool' },
-    };
+    } as MockRequest;
   });
 
   describe('custom error classes', () => {
@@ -99,10 +126,11 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Request validation failed');
-      expect((result as any).code).toBe(-32602);
-      expect((result as any).data.originalMessage).toBe('Invalid input');
-      expect((result as any).data.details).toEqual({ field: 'name' });
-      expect((result as any).data.context.sessionId).toBe('test-session-123');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.code).toBe(-32602);
+      expect(mcpError.data.originalMessage).toBe('Invalid input');
+      expect(mcpError.data.details).toEqual({ field: 'name' });
+      expect(mcpError.data.context?.sessionId).toBe('test-session-123');
     });
 
     it('should handle and enrich an authentication error', async () => {
@@ -110,8 +138,9 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Unauthorized request');
-      expect((result as any).code).toBe(-32600);
-      expect((result as any).data.sessionId).toBe('test-session-123');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.code).toBe(-32600);
+      expect(mcpError.data.sessionId).toBe('test-session-123');
     });
 
     it('should handle and enrich a rate limit error', async () => {
@@ -119,8 +148,9 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Rate limit exceeded');
-      expect((result as any).code).toBe(-32603);
-      expect((result as any).data.retryAfter).toBe(120);
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.code).toBe(-32603);
+      expect(mcpError.data.retryAfter).toBe(120);
     });
 
     it('should handle and enrich a timeout error', async () => {
@@ -128,9 +158,10 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Request timed out');
-      expect((result as any).code).toBe(-32603);
-      expect((result as any).data.timeout).toBe(5000);
-      expect((result as any).data.method).toBe('tools/call');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.code).toBe(-32603);
+      expect(mcpError.data.timeout).toBe(5000);
+      expect(mcpError.data.method).toBe('tools/call');
     });
 
     it('should handle and enrich a method not found error', async () => {
@@ -138,20 +169,24 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Method not found');
-      expect((result as any).code).toBe(-32601);
-      expect((result as any).data.method).toBe('unknown/method');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.code).toBe(-32601);
+      expect(mcpError.data.method).toBe('unknown/method');
     });
 
     it('should handle errors that already have MCP codes', async () => {
       const originalError = new Error('Custom error');
-      (originalError as any).code = -32000;
-      (originalError as any).data = { custom: 'data' };
+      (originalError as Error & { code: number; data: { custom: string } }).code = -32000;
+      (originalError as Error & { code: number; data: { custom: string } }).data = {
+        custom: 'data',
+      };
 
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Custom error');
-      expect((result as any).code).toBe(-32000);
-      expect((result as any).data.custom).toBe('data');
+      const mcpError = result as Error & { code: number; data: { custom: string } };
+      expect(mcpError.code).toBe(-32000);
+      expect(mcpError.data.custom).toBe('data');
     });
 
     it('should handle generic errors', async () => {
@@ -159,16 +194,21 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).code).toBe(-32603);
-      expect((result as any).data.originalMessage).toBe('Something went wrong');
-      expect((result as any).data.type).toBe('Error');
+      const mcpError = result as Error & {
+        code: number;
+        data: { originalMessage: string; type: string };
+      };
+      expect(mcpError.code).toBe(-32603);
+      expect(mcpError.data.originalMessage).toBe('Something went wrong');
+      expect(mcpError.data.type).toBe('Error');
     });
 
     it('should add context to all enriched errors', async () => {
       const originalError = new Error('Test error');
       const result = await errorHandler.handleError(originalError, mockRequest, mockContext);
 
-      expect((result as any).data.context).toMatchObject({
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.data.context).toMatchObject({
         sessionId: 'test-session-123',
         requestId: 'test-request-456',
         method: 'tools/call',
@@ -176,7 +216,7 @@ describe('ErrorHandler', () => {
         processingTime: expect.any(Number),
       });
 
-      expect((result as any).data.context.processingTime).toBeGreaterThan(0);
+      expect(mcpError.data.context?.processingTime).toBeGreaterThan(0);
     });
 
     it('should log errors with comprehensive context', async () => {
@@ -249,19 +289,19 @@ describe('ErrorHandler', () => {
     it('should identify recoverable errors by code', () => {
       const recoverableCodes = [-32602, -32601, -32600];
 
-      recoverableCodes.forEach(code => {
+      for (const code of recoverableCodes) {
         const error = { code };
         expect(errorHandler.isRecoverableError(error)).toBe(true);
-      });
+      }
     });
 
     it('should identify non-recoverable errors by code', () => {
       const nonRecoverableCodes = [-32603, -32000, -32099];
 
-      nonRecoverableCodes.forEach(code => {
+      for (const code of nonRecoverableCodes) {
         const error = { code };
         expect(errorHandler.isRecoverableError(error)).toBe(false);
-      });
+      }
     });
 
     it('should return false for errors without codes', () => {
@@ -381,7 +421,8 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(nullError, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).code).toBe(-32603);
+      const mcpError = result as Error & { code: number };
+      expect(mcpError.code).toBe(-32603);
     });
 
     it('should handle undefined errors gracefully', async () => {
@@ -390,7 +431,8 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(undefinedError, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).code).toBe(-32603);
+      const mcpError = result as Error & { code: number };
+      expect(mcpError.code).toBe(-32603);
     });
 
     it('should handle errors without messages', async () => {
@@ -398,7 +440,8 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).data.type).toBe('Object');
+      const mcpError = result as Error & { data: { type: string } };
+      expect(mcpError.data.type).toBe('Object');
     });
 
     it('should handle errors with non-string messages', async () => {
@@ -406,17 +449,19 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).data.originalMessage).toBe(123);
+      const mcpError = result as Error & { data: { originalMessage: number } };
+      expect(mcpError.data.originalMessage).toBe(123);
     });
 
     it('should handle circular reference errors safely', async () => {
       const error = new Error('Circular error');
-      (error as any).circular = error; // Create circular reference
+      (error as Error & { circular: Error }).circular = error; // Create circular reference
 
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).data.originalMessage).toBe('Circular error');
+      const mcpError = result as Error & { data: { originalMessage: string } };
+      expect(mcpError.data.originalMessage).toBe('Circular error');
     });
 
     it('should handle very long error messages', async () => {
@@ -426,7 +471,8 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).data.originalMessage).toBe(longMessage);
+      const mcpError = result as Error & { data: { originalMessage: string } };
+      expect(mcpError.data.originalMessage).toBe(longMessage);
     });
 
     it('should handle errors with special characters', async () => {
@@ -436,31 +482,35 @@ describe('ErrorHandler', () => {
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
       expect(result.message).toBe('Internal server error');
-      expect((result as any).data.originalMessage).toBe(specialMessage);
+      const mcpError = result as Error & { data: { originalMessage: string } };
+      expect(mcpError.data.originalMessage).toBe(specialMessage);
     });
 
     it('should preserve method from error when request method is missing', async () => {
       const error = new McpMethodNotFoundError('Method not found', 'custom/method');
       const requestWithoutMethod = { ...mockRequest };
-      delete requestWithoutMethod.method;
+      requestWithoutMethod.method = undefined;
 
       const result = await errorHandler.handleError(error, requestWithoutMethod, mockContext);
 
-      expect((result as any).data.method).toBe('custom/method');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.data.method).toBe('custom/method');
     });
 
     it('should fall back to request method when error method is missing', async () => {
       const error = new McpMethodNotFoundError('Method not found');
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
-      expect((result as any).data.method).toBe('tools/call');
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.data.method).toBe('tools/call');
     });
 
     it('should handle rate limit errors without retry after', async () => {
       const error = new McpRateLimitError('Rate limited');
       const result = await errorHandler.handleError(error, mockRequest, mockContext);
 
-      expect((result as any).data.retryAfter).toBe(60); // Default value
+      const mcpError = result as McpErrorWithData;
+      expect(mcpError.data.retryAfter).toBe(60); // Default value
     });
   });
 
@@ -493,7 +543,8 @@ describe('ErrorHandler', () => {
       const error = new Error('Test error');
       const result = await errorHandler.handleError(error, mockRequest, contextWithTime);
 
-      const processingTime = (result as any).data.context.processingTime;
+      const mcpError = result as McpErrorWithData;
+      const processingTime = mcpError.data.context?.processingTime;
       expect(processingTime).toBeGreaterThanOrEqual(500);
       expect(processingTime).toBeLessThan(1000); // Should be reasonable
     });
@@ -501,27 +552,24 @@ describe('ErrorHandler', () => {
 });
 
 // Custom Jest matcher
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toBeOneOf(expected: any[]): R;
-    }
+declare module '@jest/expect' {
+  interface Matchers<R> {
+    toBeOneOf(expected: unknown[]): R;
   }
 }
 
 expect.extend({
   toBeOneOf(received, expected) {
-    const pass = expected.includes(received);
+    const pass = (expected as unknown[]).includes(received);
     if (pass) {
       return {
         message: () => `expected ${received} not to be one of ${expected.join(', ')}`,
         pass: true,
       };
-    } else {
-      return {
-        message: () => `expected ${received} to be one of ${expected.join(', ')}`,
-        pass: false,
-      };
     }
+    return {
+      message: () => `expected ${received} to be one of ${expected.join(', ')}`,
+      pass: false,
+    };
   },
 });

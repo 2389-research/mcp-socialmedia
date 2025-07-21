@@ -32,7 +32,9 @@ export class SessionManager {
     this.sessionLock = new Promise((resolve) => {
       releaseLock = () => {
         this.lockMetrics.releases++;
-        console.log(`[SessionManager] Lock released after ${Date.now() - startTime}ms`);
+        if (process.env.NODE_ENV !== 'test') {
+          console.log(`[SessionManager] Lock released after ${Date.now() - startTime}ms`);
+        }
         resolve();
       };
     });
@@ -56,7 +58,9 @@ export class SessionManager {
       }
 
       this.lockMetrics.acquisitions++;
-      console.log(`[SessionManager] Lock acquired after ${Date.now() - startTime}ms`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`[SessionManager] Lock acquired after ${Date.now() - startTime}ms`);
+      }
       return releaseLock;
     } catch (error) {
       this.lockMetrics.failures++;

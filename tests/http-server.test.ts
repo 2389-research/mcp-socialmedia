@@ -1,9 +1,9 @@
 // ABOUTME: Unit tests for HttpMcpServer class with proper HTTP server mocking
 // ABOUTME: Tests HTTP/SSE transport functionality with comprehensive mock setup
 
-import { jest } from '@jest/globals';
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import { EventEmitter } from 'node:events';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { jest } from '@jest/globals';
 
 // Mock HTTP server implementation
 class MockHttpServer extends EventEmitter {
@@ -122,14 +122,16 @@ jest.unstable_mockModule('../src/config.js', () => ({
 // Now import the modules
 const { HttpMcpServer } = await import('../src/http-server.js');
 const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
-const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
+const { StreamableHTTPServerTransport } = await import(
+  '@modelcontextprotocol/sdk/server/streamableHttp.js'
+);
 
-import type { HttpServerOptions } from '../src/http-server.js';
 import type { ApiClient } from '../src/api-client.js';
+import type { HttpServerOptions } from '../src/http-server.js';
 import type { SessionManager } from '../src/session-manager.js';
 
 describe('HttpMcpServer', () => {
-  let httpServer: any;
+  let httpServer: HttpMcpServer;
   let mockSessionManager: jest.Mocked<SessionManager>;
   let mockApiClient: jest.Mocked<ApiClient>;
 
@@ -143,7 +145,7 @@ describe('HttpMcpServer', () => {
     mockHttpServer.host = undefined;
 
     // Reset listen method to original implementation
-    mockHttpServer.listen = function(port: number, host: string, callback?: () => void) {
+    mockHttpServer.listen = function (port: number, host: string, callback?: () => void) {
       this.port = port;
       this.host = host;
       this.listening = true;
@@ -156,7 +158,7 @@ describe('HttpMcpServer', () => {
     };
 
     // Reset close method to original implementation
-    mockHttpServer.close = function(callback?: (err?: Error) => void) {
+    mockHttpServer.close = function (callback?: (err?: Error) => void) {
       this.listening = false;
       setImmediate(() => {
         if (callback) callback();
@@ -169,8 +171,8 @@ describe('HttpMcpServer', () => {
     jest.mocked(mockMcpServer.close).mockResolvedValue(undefined);
     jest.mocked(mockTransport.handleRequest).mockResolvedValue(undefined);
 
-    mockSessionManager = {} as any;
-    mockApiClient = {} as any;
+    mockSessionManager = {} as jest.Mocked<SessionManager>;
+    mockApiClient = {} as jest.Mocked<ApiClient>;
   });
 
   describe('constructor', () => {
@@ -349,11 +351,17 @@ describe('HttpMcpServer', () => {
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
 
       // Allow async handling to complete
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', '*');
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Methods',
+        'GET, POST, DELETE, OPTIONS',
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Mcp-Session-Id',
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Max-Age', '86400');
       expect(mockRes.writeHead).toHaveBeenCalledWith(204);
       expect(mockRes.end).toHaveBeenCalled();
@@ -370,16 +378,19 @@ describe('HttpMcpServer', () => {
       await httpServer.start();
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://example.com');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://example.com',
+      );
     });
 
     it('should return 404 for non-/mcp endpoints', async () => {
       mockReq.url = '/other';
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'application/json' });
       expect(mockRes.end).toHaveBeenCalledWith(JSON.stringify({ error: 'Not found' }));
@@ -387,7 +398,7 @@ describe('HttpMcpServer', () => {
 
     it('should generate session ID when not provided', async () => {
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('Mcp-Session-Id', 'mock-uuid-123');
     });
@@ -399,19 +410,19 @@ describe('HttpMcpServer', () => {
       };
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('Mcp-Session-Id', 'test-session-123');
     });
 
     it('should delegate to transport for valid requests', async () => {
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(jest.mocked(mockTransport.handleRequest)).toHaveBeenCalledWith(
         mockReq,
         mockRes,
-        undefined // No body for this test
+        undefined, // No body for this test
       );
     });
 
@@ -419,7 +430,7 @@ describe('HttpMcpServer', () => {
       jest.mocked(mockTransport.handleRequest).mockRejectedValue(new Error('Transport error'));
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.writeHead).toHaveBeenCalledWith(500, { 'Content-Type': 'application/json' });
       expect(mockRes.end).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
@@ -430,7 +441,7 @@ describe('HttpMcpServer', () => {
       mockRes.headersSent = true;
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.writeHead).not.toHaveBeenCalled();
       expect(mockRes.end).not.toHaveBeenCalled();
@@ -438,10 +449,10 @@ describe('HttpMcpServer', () => {
 
     it('should handle missing transport gracefully', async () => {
       // Force transport to be null
-      (httpServer as any).transport = null;
+      (httpServer as unknown as { transport: null }).transport = null;
 
       mockHttpServer.simulateRequest(mockReq as IncomingMessage, mockRes as ServerResponse);
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockRes.writeHead).toHaveBeenCalledWith(500, { 'Content-Type': 'application/json' });
       expect(mockRes.end).toHaveBeenCalledWith(JSON.stringify({ error: 'Transport not found' }));
@@ -464,7 +475,9 @@ describe('HttpMcpServer', () => {
       });
 
       // Access the private method through reflection for testing
-      const parseRequestBody = (httpServer as any).parseRequestBody.bind(httpServer);
+      const parseRequestBody = (
+        httpServer as unknown as { parseRequestBody: (req: IncomingMessage) => Promise<unknown> }
+      ).parseRequestBody.bind(httpServer);
       const result = await parseRequestBody(mockReq);
 
       expect(result).toEqual(testData);
@@ -477,7 +490,9 @@ describe('HttpMcpServer', () => {
         mockReq.emit('end');
       });
 
-      const parseRequestBody = (httpServer as any).parseRequestBody.bind(httpServer);
+      const parseRequestBody = (
+        httpServer as unknown as { parseRequestBody: (req: IncomingMessage) => Promise<unknown> }
+      ).parseRequestBody.bind(httpServer);
       const result = await parseRequestBody(mockReq);
 
       expect(result).toBeUndefined();
@@ -491,7 +506,9 @@ describe('HttpMcpServer', () => {
         mockReq.emit('end');
       });
 
-      const parseRequestBody = (httpServer as any).parseRequestBody.bind(httpServer);
+      const parseRequestBody = (
+        httpServer as unknown as { parseRequestBody: (req: IncomingMessage) => Promise<unknown> }
+      ).parseRequestBody.bind(httpServer);
       await expect(parseRequestBody(mockReq)).rejects.toThrow('Invalid JSON body');
     });
 
@@ -503,7 +520,9 @@ describe('HttpMcpServer', () => {
         mockReq.emit('error', testError);
       });
 
-      const parseRequestBody = (httpServer as any).parseRequestBody.bind(httpServer);
+      const parseRequestBody = (
+        httpServer as unknown as { parseRequestBody: (req: IncomingMessage) => Promise<unknown> }
+      ).parseRequestBody.bind(httpServer);
       await expect(parseRequestBody(mockReq)).rejects.toThrow('Request error');
     });
 
@@ -520,7 +539,9 @@ describe('HttpMcpServer', () => {
         mockReq.emit('end');
       });
 
-      const parseRequestBody = (httpServer as any).parseRequestBody.bind(httpServer);
+      const parseRequestBody = (
+        httpServer as unknown as { parseRequestBody: (req: IncomingMessage) => Promise<unknown> }
+      ).parseRequestBody.bind(httpServer);
       const result = await parseRequestBody(mockReq);
 
       expect(result).toEqual(testData);
@@ -534,7 +555,7 @@ describe('HttpMcpServer', () => {
 
     it('should handle port already in use error', async () => {
       const portError = new Error('EADDRINUSE: Address already in use');
-      (portError as any).code = 'EADDRINUSE';
+      (portError as unknown as { code: string }).code = 'EADDRINUSE';
 
       // Override listen to simulate port conflict
       mockHttpServer.listen = jest.fn().mockImplementation(() => {

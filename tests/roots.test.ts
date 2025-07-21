@@ -16,10 +16,21 @@ jest.mock('../src/logger.js', () => ({
 import { RootsManager, registerRoots } from '../src/roots/index.js';
 import type { RootDefinition, RootLimits, RootPermissions } from '../src/roots/types.js';
 
+// Test type interfaces
+interface MockServer {
+  resource: jest.MockedFunction<(...args: any[]) => any>;
+}
+
+interface MockContext {
+  apiClient: object;
+  sessionManager: object;
+  rootsManager?: RootsManager;
+}
+
 describe('Roots System', () => {
   let rootsManager: RootsManager;
-  let mockServer: any;
-  let mockContext: any;
+  let mockServer: MockServer;
+  let mockContext: MockContext;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -27,12 +38,12 @@ describe('Roots System', () => {
 
     mockServer = {
       resource: jest.fn(),
-    };
+    } as MockServer;
 
     mockContext = {
       apiClient: {},
       sessionManager: {},
-    };
+    } as MockContext;
   });
 
   describe('RootsManager', () => {
@@ -56,7 +67,7 @@ describe('Roots System', () => {
             maxConcurrentSessions: 5,
             maxContentLength: 2000,
             rateLimitWindow: 3600000,
-          })
+          }),
         );
 
         expect(defaultRoot?.permissions).toEqual(
@@ -67,7 +78,7 @@ describe('Roots System', () => {
             canAccessAgentProfiles: true,
             canUsePrompts: true,
             canUseSampling: true,
-          })
+          }),
         );
       });
 
@@ -75,7 +86,7 @@ describe('Roots System', () => {
         const defaultRoot = rootsManager.getRootForSession('test-session');
 
         expect(defaultRoot?.limits.allowedOperations).toEqual(
-          expect.arrayContaining(['read_posts', 'create_post', 'login'])
+          expect.arrayContaining(['read_posts', 'create_post', 'login']),
         );
       });
     });
@@ -359,7 +370,7 @@ describe('Roots System', () => {
         const allRoots = rootsManager.getAllRoots();
         expect(allRoots).toHaveLength(3);
 
-        const uris = allRoots.map(r => r.uri);
+        const uris = allRoots.map((r: RootDefinition) => r.uri);
         expect(uris).toContain('social://workspace');
         expect(uris).toContain('social://custom1');
         expect(uris).toContain('social://custom2');
@@ -395,7 +406,7 @@ describe('Roots System', () => {
         const allRoots = rootsManager.getAllRoots();
         expect(allRoots).toHaveLength(2);
 
-        const addedRoot = allRoots.find(r => r.uri === 'social://test-workspace');
+        const addedRoot = allRoots.find((r) => r.uri === 'social://test-workspace');
         expect(addedRoot).toBeDefined();
         expect(addedRoot?.name).toBe('Test Workspace');
         expect(addedRoot?.limits.maxPostsPerHour).toBe(25);
@@ -452,7 +463,7 @@ describe('Roots System', () => {
         rootsManager.addRoot(updatedRoot);
         expect(rootsManager.getAllRoots()).toHaveLength(2); // Default + updated (overwrote original)
 
-        const finalRoot = rootsManager.getAllRoots().find(r => r.uri === 'social://duplicate');
+        const finalRoot = rootsManager.getAllRoots().find((r) => r.uri === 'social://duplicate');
         expect(finalRoot?.name).toBe('Updated Name');
         expect(finalRoot?.limits.maxPostsPerHour).toBe(15);
       });
@@ -529,7 +540,7 @@ describe('Roots System', () => {
           description: 'Available workspace boundaries and operational limits',
           mimeType: 'application/json',
         }),
-        expect.any(Function)
+        expect.any(Function),
       );
 
       expect(returnedManager).toBeInstanceOf(RootsManager);
@@ -562,7 +573,7 @@ describe('Roots System', () => {
           uri: 'social://workspace',
           name: 'Social Media Workspace',
           description: 'Default workspace for social media operations',
-        })
+        }),
       );
     });
 
@@ -598,7 +609,7 @@ describe('Roots System', () => {
       const content = JSON.parse(result.contents[0].text);
       expect(content.roots).toHaveLength(2);
 
-      const uris = content.roots.map((r: any) => r.uri);
+      const uris = content.roots.map((r: RootDefinition) => r.uri);
       expect(uris).toContain('social://workspace');
       expect(uris).toContain('social://premium');
     });
@@ -739,17 +750,17 @@ describe('Roots System', () => {
       manager.addRoot(customRoot);
 
       // Assign all sessions to custom root
-      sessions.forEach(sessionId => {
+      for (const sessionId of sessions) {
         const result = manager.assignRootToSession(sessionId, 'social://concurrent-test');
         expect(result).toBe(true);
-      });
+      }
 
       // Verify all sessions have correct assignment
-      sessions.forEach(sessionId => {
+      for (const sessionId of sessions) {
         expect(manager.getRootForSession(sessionId)?.uri).toBe('social://concurrent-test');
         expect(manager.isOperationAllowed(sessionId, 'create_post')).toBe(true);
         expect(manager.isContentLengthValid(sessionId, 1800)).toBe(true);
-      });
+      }
 
       // Clear some sessions
       manager.clearSessionRoot('session2');
@@ -776,19 +787,26 @@ describe('Roots System', () => {
     });
 
     it('should handle very large content lengths', () => {
-      expect(rootsManager.isContentLengthValid('test-session', Number.MAX_SAFE_INTEGER)).toBe(false);
+      expect(rootsManager.isContentLengthValid('test-session', Number.MAX_SAFE_INTEGER)).toBe(
+        false,
+      );
     });
 
     it('should handle special characters in session IDs', () => {
-      const specialSessions = ['session@123', 'session.with.dots', 'session-with-dashes', 'session_with_underscores'];
+      const specialSessions = [
+        'session@123',
+        'session.with.dots',
+        'session-with-dashes',
+        'session_with_underscores',
+      ];
 
-      specialSessions.forEach(sessionId => {
+      for (const sessionId of specialSessions) {
         const result = rootsManager.assignRootToSession(sessionId, 'social://workspace');
         expect(result).toBe(true);
 
         const root = rootsManager.getRootForSession(sessionId);
         expect(root?.uri).toBe('social://workspace');
-      });
+      }
     });
 
     it('should handle unicode characters in root URIs and names', () => {
