@@ -11,7 +11,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",
-    "test:coverage": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --coverage",
+    "test:coverage": "NODE_ENV=test NODE_OPTIONS=\"--experimental-vm-modules\" jest --coverage",
     "test:watch": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --watch",
     "test:integration": "./scripts/test-mcp-integration.sh",
     "test:mcp-sse": "NODE_OPTIONS=\"--experimental-vm-modules\" jest tests/integration/mcp-sse-mocked.test.ts",
