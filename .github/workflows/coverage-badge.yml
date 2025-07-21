@@ -23,6 +23,11 @@ jobs:
     - name: Run tests with coverage
       run: npm test -- --coverage --coverageReporters=json-summary
 
+    - name: Extract coverage percentage
+      run: |
+        COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+        echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
+
     - name: Generate Coverage Badge
       uses: schneegans/dynamic-badges-action@v1.7.0
       with:
@@ -34,8 +39,3 @@ jobs:
         valColorRange: ${{ env.COVERAGE_PERCENTAGE }}
         maxColorRange: 100
         minColorRange: 0
-
-    - name: Extract coverage percentage
-      run: |
-        COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
-        echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
