@@ -13,6 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y jq
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -24,6 +27,8 @@ jobs:
 
     - name: Run tests with coverage
       run: npm test -- --coverage
+      env:
+        NODE_ENV: test
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

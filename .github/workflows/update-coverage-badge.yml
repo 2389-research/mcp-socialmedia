@@ -19,6 +19,9 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y jq bc
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -30,6 +33,8 @@ jobs:
 
     - name: Run tests with coverage
       run: npm test -- --coverage --silent
+      env:
+        NODE_ENV: test
 
     - name: Extract coverage percentage
       id: coverage

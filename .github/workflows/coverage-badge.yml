@@ -11,6 +11,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y jq
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -22,6 +25,13 @@ jobs:
 
     - name: Run tests with coverage
       run: npm test -- --coverage --coverageReporters=json-summary
+      env:
+        NODE_ENV: test
+
+    - name: Extract coverage percentage
+      run: |
+        COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+        echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
 
     - name: Extract coverage percentage
       run: |

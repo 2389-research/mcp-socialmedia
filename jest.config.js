@@ -27,4 +27,8 @@ export default {
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+  reporters: [
+    'default',
+    ['jest-junit', { outputDirectory: 'coverage', outputName: 'junit.xml' }]
+  ],
 };
