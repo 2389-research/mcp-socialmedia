@@ -155,6 +155,7 @@ async function main() {
 }
 
 async function shutdown(signal: string) {
+  logger.serverShutdown(signal);
   logger.warn(`Received ${signal}, shutting down gracefully...`);
 
   // Clear intervals

@@ -5,90 +5,16 @@ import type { Session } from './types.js';
 
 export class SessionManager {
   private sessions: Map<string, Session>;
-  private sessionLock: Promise<void>;
-  private lockTimeout: number;
-  private lockMetrics: {
-    acquisitions: number;
-    releases: number;
-    timeouts: number;
-    failures: number;
-  };
 
-  constructor(lockTimeout = 30000) {
+  constructor() {
     this.sessions = new Map();
-    this.sessionLock = Promise.resolve();
-    this.lockTimeout = lockTimeout;
-    this.lockMetrics = { acquisitions: 0, releases: 0, timeouts: 0, failures: 0 };
-  }
-
-  /**
-   * Acquires a lock for session operations with timeout and health monitoring
-   */
-  private async acquireLock(): Promise<() => void> {
-    const startTime = Date.now();
-    const currentLock = this.sessionLock;
-    let releaseLock: (() => void) | undefined;
-
-    this.sessionLock = new Promise((resolve) => {
-      releaseLock = () => {
-        this.lockMetrics.releases++;
-        if (process.env.NODE_ENV !== 'test') {
-          console.log(`[SessionManager] Lock released after ${Date.now() - startTime}ms`);
-        }
-        resolve();
-      };
-    });
-
-    try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          this.lockMetrics.timeouts++;
-          console.error(`[SessionManager] Lock acquisition timed out after ${this.lockTimeout}ms`);
-          reject(new Error(`Lock acquisition timed out after ${this.lockTimeout}ms`));
-        }, this.lockTimeout);
-      });
-
-      // Race between lock acquisition and timeout
-      await Promise.race([currentLock, timeoutPromise]);
-
-      if (!releaseLock) {
-        this.lockMetrics.failures++;
-        throw new Error('Failed to acquire session lock');
-      }
-
-      this.lockMetrics.acquisitions++;
-      if (process.env.NODE_ENV !== 'test') {
-        console.log(`[SessionManager] Lock acquired after ${Date.now() - startTime}ms`);
-      }
-      return releaseLock;
-    } catch (error) {
-      this.lockMetrics.failures++;
-      console.error('[SessionManager] Lock acquisition failed:', error);
-      throw error;
-    }
   }
 
   /**
    * Creates a new session or updates an existing one
    */
   async createSession(sessionId: string, agentName: string): Promise<Session> {
-    try {
-      // Attempt to acquire lock
-      const releaseLock = await this.acquireLock();
-      try {
-        return this.createSessionUnsafe(sessionId, agentName);
-      } finally {
-        releaseLock();
-      }
-    } catch (error) {
-      // Fallback to non-locking operation on lock failure
-      console.warn(
-        '[SessionManager] Lock acquisition failed, falling back to non-locking operation:',
-        error,
-      );
-      return this.createSessionUnsafe(sessionId, agentName);
-    }
+    return this.createSessionUnsafe(sessionId, agentName);
   }
 
   /**
@@ -137,22 +63,7 @@ export class SessionManager {
    * Deletes a session by ID
    */
   async deleteSession(sessionId: string): Promise<boolean> {
-    try {
-      // Attempt to acquire lock
-      const releaseLock = await this.acquireLock();
-      try {
-        return this.sessions.delete(sessionId);
-      } finally {
-        releaseLock();
-      }
-    } catch (error) {
-      // Fallback to non-locking operation on lock failure
-      console.warn(
-        '[SessionManager] Lock acquisition failed, falling back to non-locking operation:',
-        error,
-      );
-      return this.sessions.delete(sessionId);
-    }
+    return this.sessions.delete(sessionId);
   }
 
   /**
@@ -201,22 +112,7 @@ export class SessionManager {
    * Clears all sessions
    */
   async clearAllSessions(): Promise<void> {
-    try {
-      // Attempt to acquire lock
-      const releaseLock = await this.acquireLock();
-      try {
-        this.sessions.clear();
-      } finally {
-        releaseLock();
-      }
-    } catch (error) {
-      // Fallback to non-locking operation on lock failure
-      console.warn(
-        '[SessionManager] Lock acquisition failed, falling back to non-locking operation:',
-        error,
-      );
-      this.sessions.clear();
-    }
+    this.sessions.clear();
   }
 
   /**
@@ -230,22 +126,7 @@ export class SessionManager {
    * Cleans up sessions older than the specified age in milliseconds
    */
   async cleanupOldSessions(maxAgeMs: number): Promise<number> {
-    try {
-      // Attempt to acquire lock
-      const releaseLock = await this.acquireLock();
-      try {
-        return this.cleanupOldSessionsUnsafe(maxAgeMs);
-      } finally {
-        releaseLock();
-      }
-    } catch (error) {
-      // Fallback to non-locking operation on lock failure
-      console.warn(
-        '[SessionManager] Lock acquisition failed, falling back to non-locking operation:',
-        error,
-      );
-      return this.cleanupOldSessionsUnsafe(maxAgeMs);
-    }
+    return this.cleanupOldSessionsUnsafe(maxAgeMs);
   }
 
   /**
@@ -264,12 +145,5 @@ export class SessionManager {
     }
 
     return removedCount;
-  }
-
-  /**
-   * Gets lock health metrics for monitoring
-   */
-  getLockMetrics(): { acquisitions: number; releases: number; timeouts: number; failures: number } {
-    return { ...this.lockMetrics };
   }
 }
