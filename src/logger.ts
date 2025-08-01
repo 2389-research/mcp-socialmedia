@@ -133,8 +133,13 @@ export class Logger {
         try {
           appendFileSync(this.logFile, `${formattedMessage}\n`);
         } catch (error) {
-          // If file logging fails, continue with normal logging
-          process.stderr.write(`File logging failed: ${error}\n`);
+          // If file logging fails, try stderr but don't create infinite loops
+          try {
+            process.stderr.write(`File logging failed: ${error}\n`);
+          } catch (_stderrError) {
+            // If both file and stderr fail, silently continue - avoid infinite loops
+            // This prevents EPIPE cascades when stdio is completely broken
+          }
         }
       }
 
@@ -151,10 +156,21 @@ export class Logger {
           }
         }
       } catch (error) {
-        // Ignore EPIPE errors - they happen when stdout is closed (e.g., when Claude Desktop disconnects)
-        if (error instanceof Error && 'code' in error && error.code !== 'EPIPE') {
-          // Only rethrow non-EPIPE errors
-          throw error;
+        // Completely ignore EPIPE errors to prevent infinite loops
+        // These happen when stdout/stderr are closed (e.g., when Claude Desktop disconnects)
+        if (error instanceof Error && 'code' in error && error.code === 'EPIPE') {
+          // Silent fail on EPIPE - don't try to log this error as it creates infinite loops
+          return;
+        }
+
+        // Only rethrow non-EPIPE errors, but also protect against infinite loops
+        if (this.logFile) {
+          try {
+            appendFileSync(this.logFile, `Logger stdio error: ${error}\n`);
+          } catch (_fileError) {
+            // If both stdio and file fail, we're in a bad state - just return
+            return;
+          }
         }
       }
     }
@@ -289,8 +305,12 @@ export class Logger {
           `Uptime: ${Math.floor((Date.now() - this.startTime) / 1000)}s\n\n`,
         );
       } catch (error) {
-        // Even if file logging fails, try to write to stderr
-        process.stderr.write(`File logging failed during shutdown: ${error}\n`);
+        // Even if file logging fails, try to write to stderr but avoid infinite loops
+        try {
+          process.stderr.write(`File logging failed during shutdown: ${error}\n`);
+        } catch (_stderrError) {
+          // If both fail during shutdown, we can't do much - just continue
+        }
       }
     }
 
