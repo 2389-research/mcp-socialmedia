@@ -3,7 +3,7 @@
 
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { ENV_KEYS } from './config.js';
 
 export enum LogLevel {
@@ -37,9 +37,7 @@ export class Logger {
     this.logFile = process.env.LOG_FILE || null;
 
     // Create instance identifier from current working directory + process ID
-    const cwd = process.cwd();
-    const cwdParts = cwd.split('/');
-    const dirName = cwdParts[cwdParts.length - 1] || 'unknown';
+    const dirName = basename(process.cwd()) || 'unknown';
     this.instanceId = `${dirName}:${process.pid}`;
 
     // Initialize log file if specified
