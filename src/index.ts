@@ -124,11 +124,23 @@ async function main() {
 
     // Handle uncaught errors to prevent sudden crashes
     process.on('uncaughtException', (error) => {
+      // Prevent infinite loops when logging EPIPE errors
+      if (error instanceof Error && 'code' in error && error.code === 'EPIPE') {
+        // Don't try to log EPIPE errors - just shutdown silently
+        shutdown('UNCAUGHT_EXCEPTION');
+        return;
+      }
       logger.error('Uncaught exception', { error: error.message, stack: error.stack });
       shutdown('UNCAUGHT_EXCEPTION');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
+      // Prevent infinite loops when rejection is due to EPIPE errors
+      if (reason instanceof Error && 'code' in reason && reason.code === 'EPIPE') {
+        // Don't try to log EPIPE-related rejections - just shutdown silently
+        shutdown('UNHANDLED_REJECTION');
+        return;
+      }
       logger.error('Unhandled rejection', { reason, promise });
       shutdown('UNHANDLED_REJECTION');
     });
