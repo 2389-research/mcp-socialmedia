@@ -1,6 +1,9 @@
 // ABOUTME: Enhanced logging utility for the MCP Agent Social Media Server
 // ABOUTME: Provides structured logging with levels, context, and performance tracking
 
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import { ENV_KEYS } from './config.js';
 
 export enum LogLevel {
@@ -24,11 +27,41 @@ export class Logger {
   private logLevel: LogLevel;
   private startTime: number;
   private isStdioMode: boolean;
+  private logFile: string | null;
+  private instanceId: string;
 
   private constructor() {
     this.logLevel = this.parseLogLevel(process.env[ENV_KEYS.LOG_LEVEL] || 'INFO');
     this.startTime = Date.now();
     this.isStdioMode = process.env[ENV_KEYS.MCP_TRANSPORT] !== 'http';
+    this.logFile = process.env.LOG_FILE || null;
+
+    // Create instance identifier from current working directory + process ID
+    const dirName = basename(process.cwd()) || 'unknown';
+    this.instanceId = `${dirName}:${process.pid}`;
+
+    // Initialize log file if specified
+    if (this.logFile) {
+      try {
+        // Ensure directory exists
+        const logDir = dirname(this.logFile);
+        if (!existsSync(logDir)) {
+          mkdirSync(logDir, { recursive: true });
+        }
+
+        // Write startup banner to log file
+        const banner = `\n=== MCP Agent Social Server [${this.instanceId}] Started at ${new Date().toISOString()} ===\n`;
+        if (existsSync(this.logFile)) {
+          appendFileSync(this.logFile, banner);
+        } else {
+          writeFileSync(this.logFile, banner);
+        }
+      } catch (error) {
+        // If file logging fails, continue without it but log to stderr
+        process.stderr.write(`Failed to initialize log file ${this.logFile}: ${error}\n`);
+        this.logFile = null;
+      }
+    }
   }
 
   static getInstance(): Logger {
@@ -86,12 +119,28 @@ export class Logger {
       }
     }
 
-    return `[${timestamp}] [${level}] [uptime:${uptime}s] ${message}${contextStr}`;
+    return `[${timestamp}] [${level}] [${this.instanceId}] [uptime:${uptime}s] ${message}${contextStr}`;
   }
 
   private log(level: LogLevel, levelStr: string, message: string, context?: LogContext): void {
     if (level <= this.logLevel) {
       const formattedMessage = this.formatMessage(levelStr, message, context);
+
+      // Always write to file if configured
+      if (this.logFile) {
+        try {
+          appendFileSync(this.logFile, `${formattedMessage}\n`);
+        } catch (error) {
+          // If file logging fails, try stderr but don't create infinite loops
+          try {
+            process.stderr.write(`File logging failed: ${error}\n`);
+          } catch (_stderrError) {
+            // If both file and stderr fail, silently continue - avoid infinite loops
+            // This prevents EPIPE cascades when stdio is completely broken
+          }
+        }
+      }
+
       try {
         if (this.isStdioMode) {
           // In stdio mode, write to stderr to avoid polluting JSON-RPC stream
@@ -105,10 +154,21 @@ export class Logger {
           }
         }
       } catch (error) {
-        // Ignore EPIPE errors - they happen when stdout is closed (e.g., when Claude Desktop disconnects)
-        if (error instanceof Error && 'code' in error && error.code !== 'EPIPE') {
-          // Only rethrow non-EPIPE errors
-          throw error;
+        // Completely ignore EPIPE errors to prevent infinite loops
+        // These happen when stdout/stderr are closed (e.g., when Claude Desktop disconnects)
+        if (error instanceof Error && 'code' in error && error.code === 'EPIPE') {
+          // Silent fail on EPIPE - don't try to log this error as it creates infinite loops
+          return;
+        }
+
+        // Only rethrow non-EPIPE errors, but also protect against infinite loops
+        if (this.logFile) {
+          try {
+            appendFileSync(this.logFile, `Logger stdio error: ${error}\n`);
+          } catch (_fileError) {
+            // If both stdio and file fail, we're in a bad state - just return
+            return;
+          }
         }
       }
     }
@@ -223,6 +283,40 @@ export class Logger {
       operation,
       duration: `${duration}ms`,
       slow: duration > 1000,
+      ...context,
+    });
+  }
+
+  // Shutdown/death logging
+  serverShutdown(reason: string, context?: LogContext): void {
+    const shutdownMessage = `=== SERVER SHUTDOWN: ${reason} at ${new Date().toISOString()} ===`;
+
+    // Always write shutdown to file if configured, even if log level is low
+    if (this.logFile) {
+      try {
+        appendFileSync(this.logFile, `${shutdownMessage}\n`);
+        if (context) {
+          appendFileSync(this.logFile, `Context: ${JSON.stringify(context)}\n`);
+        }
+        appendFileSync(
+          this.logFile,
+          `Uptime: ${Math.floor((Date.now() - this.startTime) / 1000)}s\n\n`,
+        );
+      } catch (error) {
+        // Even if file logging fails, try to write to stderr but avoid infinite loops
+        try {
+          process.stderr.write(`File logging failed during shutdown: ${error}\n`);
+        } catch (_stderrError) {
+          // If both fail during shutdown, we can't do much - just continue
+        }
+      }
+    }
+
+    // Also log normally
+    this.error(`Server shutting down: ${reason}`, {
+      reason,
+      uptime: Math.floor((Date.now() - this.startTime) / 1000),
+      timestamp: new Date().toISOString(),
       ...context,
     });
   }
