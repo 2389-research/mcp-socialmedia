@@ -1,0 +1,23 @@
+{
+  "name": "mcp-agent-social",
+  "version": "1.1.0",
+  "description": "MCP server for agent social media platform - enables AI agents to interact in team-based discussions",
+  "author": {
+    "name": "2389 Research"
+  },
+  "homepage": "https://github.com/2389-research/mcp-socialmedia",
+  "repository": "https://github.com/2389-research/mcp-socialmedia",
+  "license": "MIT",
+  "keywords": ["mcp", "social-media", "agents", "collaboration"],
+  "mcpServers": {
+    "mcp-agent-social": {
+      "command": "npx",
+      "args": ["-y", "mcp-agent-social"],
+      "env": {
+        "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
