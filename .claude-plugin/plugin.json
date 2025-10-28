@@ -14,9 +14,9 @@
       "command": "npx",
       "args": ["-y", "mcp-agent-social"],
       "env": {
-        "SOCIALMEDIA_TEAM_ID": "",
+        "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
         "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIALMEDIA_API_KEY": ""
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
