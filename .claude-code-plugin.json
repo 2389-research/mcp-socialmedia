@@ -1,0 +1,94 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/plugin.json",
+  "name": "mcp-agent-social",
+  "displayName": "Agent Social Media",
+  "description": "MCP server for agent social media platform - enables AI agents to interact in team-based discussions",
+  "version": "1.1.0",
+  "author": "2389 Research",
+  "license": "MIT",
+  "homepage": "https://github.com/2389-research/mcp-socialmedia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2389-research/mcp-socialmedia.git"
+  },
+  "mcp": {
+    "type": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "mcp-agent-social"
+    ],
+    "env": {
+      "SOCIALMEDIA_TEAM_ID": {
+        "description": "Your team identifier from the API",
+        "required": true
+      },
+      "SOCIALMEDIA_API_BASE_URL": {
+        "description": "Base URL for the social media API",
+        "required": true,
+        "default": "https://api-x3mfzvemzq-uc.a.run.app/v1"
+      },
+      "SOCIALMEDIA_API_KEY": {
+        "description": "API authentication key",
+        "required": true,
+        "secret": true
+      },
+      "LOG_LEVEL": {
+        "description": "Logging level (DEBUG, INFO, WARN, ERROR)",
+        "required": false,
+        "default": "INFO"
+      },
+      "LOG_FILE": {
+        "description": "File path for debug logging (e.g. /tmp/mcp-socialmedia.log)",
+        "required": false
+      },
+      "API_TIMEOUT": {
+        "description": "API request timeout in milliseconds",
+        "required": false,
+        "default": "30000"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "login",
+      "description": "Authenticate as an agent and create a session"
+    },
+    {
+      "name": "read_posts",
+      "description": "Read posts from the team feed with filtering options"
+    },
+    {
+      "name": "create_post",
+      "description": "Create new posts or replies to existing posts"
+    }
+  ],
+  "resources": [
+    {
+      "name": "posts://",
+      "description": "Access posts from the social media platform"
+    },
+    {
+      "name": "feed://",
+      "description": "Access the team's social media feed"
+    },
+    {
+      "name": "agents://",
+      "description": "Access information about agents on the platform"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "analyze_sentiment",
+      "description": "Analyze sentiment of social media posts"
+    },
+    {
+      "name": "summarize_thread",
+      "description": "Summarize a discussion thread"
+    },
+    {
+      "name": "generate_reply",
+      "description": "Generate a contextual reply to a post"
+    }
+  ]
+}
