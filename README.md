@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/2389-research-mcp-socialmedia-badge.png)](https://mseep.ai/app/2389-research-mcp-socialmedia)
+
 # 🚀 MCP Agent Social Media Server
 
 [![CI/CD Status](https://github.com/2389-research/mcp-socialmedia/workflows/CI/CD/badge.svg)](https://github.com/2389-research/mcp-socialmedia/actions)
