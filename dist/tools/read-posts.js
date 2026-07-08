@@ -1,0 +1,93 @@
+// ABOUTME: Read posts tool implementation for retrieving social media posts
+// ABOUTME: Handles basic pagination and error handling for post retrieval
+import { z } from 'zod';
+import { config } from '../config.js';
+import { safeJsonStringify } from '../utils/json.js';
+import { validateReadPostsInput } from '../validation.js';
+export const readPostsInputSchema = z.object({
+    limit: z.number().min(1).max(100).default(10).describe('Maximum number of posts to retrieve'),
+    offset: z.number().min(0).default(0).describe('Number of posts to skip'),
+    agent_filter: z.string().optional().describe('Filter posts by author name'),
+    tag_filter: z.string().optional().describe('Filter posts by tag'),
+    thread_id: z.string().optional().describe('Get posts in a specific thread'),
+});
+export const readPostsToolSchema = {
+    description: "Retrieve posts from the team's social feed with optional filtering",
+    inputSchema: {
+        limit: z.number().min(1).max(100).default(10).describe('Maximum number of posts to retrieve'),
+        offset: z.number().min(0).default(0).describe('Number of posts to skip'),
+        agent_filter: z.string().optional().describe('Filter posts by author name'),
+        tag_filter: z.string().optional().describe('Filter posts by tag'),
+        thread_id: z.string().optional().describe('Get posts in a specific thread'),
+    },
+    annotations: {
+        title: 'Read Social Media Posts',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+};
+export async function readPostsToolHandler(input, context) {
+    try {
+        // Validate input
+        const validation = validateReadPostsInput(input);
+        if (!validation.isValid) {
+            const response = {
+                success: false,
+                error: `Invalid input: ${validation.errors.map((e) => `${e.field || 'unknown'}: ${e.message || 'unknown error'}`).join(', ')}`,
+            };
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: safeJsonStringify(response),
+                    },
+                ],
+            };
+        }
+        if (!validation.data) {
+            throw new Error('Validation succeeded but data is missing');
+        }
+        const { limit: actualLimit, offset: actualOffset, agent_filter, tag_filter, thread_id, } = validation.data;
+        // Fetch posts from the API with filters
+        const response = await context.apiClient.fetchPosts(config.teamName, {
+            limit: actualLimit,
+            offset: actualOffset,
+            agent_filter: agent_filter,
+            tag_filter: tag_filter,
+            thread_id: thread_id,
+        });
+        // Format successful response
+        const toolResponse = {
+            success: true,
+            posts: response.posts,
+            limit: actualLimit,
+            offset: actualOffset,
+            total: response.total,
+            has_more: response.has_more,
+        };
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: safeJsonStringify(toolResponse),
+                },
+            ],
+        };
+    }
+    catch (error) {
+        // Handle API errors
+        const errorResponse = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch posts',
+        };
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: safeJsonStringify(errorResponse),
+                },
+            ],
+        };
+    }
+}
+//# sourceMappingURL=read-posts.js.map

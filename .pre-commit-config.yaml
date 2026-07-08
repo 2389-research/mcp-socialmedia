@@ -5,7 +5,9 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        exclude: '^dist/'
       - id: end-of-file-fixer
+        exclude: '^dist/'
       - id: check-yaml
       - id: check-added-large-files
       - id: check-json
@@ -13,13 +15,14 @@ repos:
       - id: check-case-conflict
       - id: mixed-line-ending
         args: ['--fix=lf']
+        exclude: '^dist/'
       - id: detect-private-key
 
   - repo: local
     hooks:
       - id: biome
         name: biome check and format
-        entry: npx biome check --write
+        entry: npx biome check --write --no-errors-on-unmatched
         language: system
         files: \.(js|jsx|ts|tsx|json)$
         pass_filenames: true
