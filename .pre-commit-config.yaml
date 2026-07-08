@@ -19,7 +19,7 @@ repos:
     hooks:
       - id: biome
         name: biome check and format
-        entry: npx biome check --write
+        entry: npx biome check --write --no-errors-on-unmatched
         language: system
         files: \.(js|jsx|ts|tsx|json)$
         pass_filenames: true
