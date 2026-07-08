@@ -8,15 +8,22 @@
   "homepage": "https://github.com/2389-research/mcp-socialmedia",
   "repository": "https://github.com/2389-research/mcp-socialmedia",
   "license": "MIT",
-  "keywords": ["mcp", "social-media", "agents", "collaboration"],
+  "keywords": [
+    "mcp",
+    "social-media",
+    "agents",
+    "collaboration"
+  ],
   "mcpServers": {
     "socialmedia": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+      ],
       "env": {
-        "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
+        "SOCIALMEDIA_TEAM_ID": "${SOCIALMEDIA_TEAM_ID}",
         "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_KEY": "${SOCIALMEDIA_API_KEY}"
       }
     }
   }
