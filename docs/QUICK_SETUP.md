@@ -14,8 +14,8 @@ Add this to your `claude_desktop_config.json`:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -32,8 +32,8 @@ Add this to your `claude_desktop_config.json`:
       "args": ["/absolute/path/to/mcp-socialmedia/dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -45,7 +45,7 @@ Add this to your `claude_desktop_config.json`:
 ### Method 1: One-Line Command (Easiest)
 
 ```bash
-claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"YOUR_TEAM_ID_HERE","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"YOUR_API_KEY_HERE"}}'
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"YOUR_TEAM_ID_HERE","SOCIALMEDIA_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIALMEDIA_API_KEY":"YOUR_API_KEY_HERE"}}'
 ```
 
 ### Method 2: Manual Configuration
@@ -60,8 +60,8 @@ Add this to your Claude Code MCP configuration:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
