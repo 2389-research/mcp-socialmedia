@@ -9,6 +9,7 @@ import type { ApiClient } from './api-client.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import type { SessionManager } from './session-manager.js';
+import type { IXquikClient } from './xquik-client.js';
 
 export interface HttpServerOptions {
   port?: number;
@@ -27,6 +28,7 @@ export class HttpMcpServer {
     private readonly sessionManager: SessionManager,
     private readonly apiClient: ApiClient,
     options: HttpServerOptions = {},
+    private readonly xquikClient?: IXquikClient,
   ) {
     this.options = {
       port: options.port ?? 3000,
@@ -200,6 +202,7 @@ export class HttpMcpServer {
       sessionManager: this.sessionManager,
       apiClient: this.apiClient,
       hooksManager,
+      xquikClient: this.xquikClient,
     });
     registerResources(this.mcpServer, {
       apiClient: this.apiClient,

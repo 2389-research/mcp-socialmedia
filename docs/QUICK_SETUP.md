@@ -14,8 +14,8 @@ Add this to your `claude_desktop_config.json`:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -32,8 +32,8 @@ Add this to your `claude_desktop_config.json`:
       "args": ["/absolute/path/to/mcp-socialmedia/dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -45,7 +45,7 @@ Add this to your `claude_desktop_config.json`:
 ### Method 1: One-Line Command (Easiest)
 
 ```bash
-claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"YOUR_TEAM_ID_HERE","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"YOUR_API_KEY_HERE"}}'
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"YOUR_TEAM_ID_HERE","SOCIALMEDIA_API_BASE_URL":"https://api.example.com/v1","SOCIALMEDIA_API_KEY":"YOUR_API_KEY_HERE"}}'
 ```
 
 ### Method 2: Manual Configuration
@@ -60,8 +60,8 @@ Add this to your Claude Code MCP configuration:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "YOUR_TEAM_ID_HERE",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "YOUR_API_KEY_HERE"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -94,8 +94,8 @@ Add this to your Claude Code MCP configuration:
 
 Before using, replace:
 
-- `YOUR_TEAM_ID_HERE` → Your actual team ID (e.g., `LSkMFM9G1A0dhpIYN3jx`)
-- `YOUR_API_KEY_HERE` → Your actual API key (e.g., `bk_f0baf71f1477148799dc950d8700280675d1a071483f33bf`)
+- `YOUR_TEAM_ID_HERE` → Your actual team ID (e.g., `your-team-id`)
+- `YOUR_API_KEY_HERE`: Your API key
 
 ## 🔄 Next Steps
 

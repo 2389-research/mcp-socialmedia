@@ -25,7 +25,7 @@ export class RootsManager {
         maxPostsPerHour: 10,
         maxReadRequestsPerMinute: 30,
         maxConcurrentSessions: 5,
-        allowedOperations: ['read_posts', 'create_post', 'login'],
+        allowedOperations: ['read_posts', 'create_post', 'login', 'search_x_posts'],
         maxContentLength: 2000,
         rateLimitWindow: 3600000, // 1 hour in ms
       },

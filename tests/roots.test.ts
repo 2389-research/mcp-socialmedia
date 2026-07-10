@@ -86,7 +86,7 @@ describe('Roots System', () => {
         const defaultRoot = rootsManager.getRootForSession('test-session');
 
         expect(defaultRoot?.limits.allowedOperations).toEqual(
-          expect.arrayContaining(['read_posts', 'create_post', 'login']),
+          expect.arrayContaining(['read_posts', 'create_post', 'login', 'search_x_posts']),
         );
       });
     });

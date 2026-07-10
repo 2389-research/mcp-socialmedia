@@ -14,10 +14,12 @@ import { registerResources } from './resources/index.js';
 import { registerRoots } from './roots/index.js';
 import { SessionManager } from './session-manager.js';
 import { registerTools } from './tools/index.js';
+import { createXquikClientFromEnv } from './xquik-client.js';
 
 // Initialize shared components
 const sessionManager = new SessionManager();
 const apiClient = new ApiClient();
+const xquikClient = createXquikClientFromEnv();
 
 // Server instances
 let mcpServer: McpServer | null = null;
@@ -58,12 +60,17 @@ async function main() {
 
       logger.info('Starting in HTTP mode', { port: httpPort, host: httpHost });
 
-      httpServer = new HttpMcpServer(sessionManager, apiClient, {
-        port: httpPort,
-        host: httpHost,
-        enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
-        corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
-      });
+      httpServer = new HttpMcpServer(
+        sessionManager,
+        apiClient,
+        {
+          port: httpPort,
+          host: httpHost,
+          enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
+          corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
+        },
+        xquikClient,
+      );
 
       await httpServer.start();
     } else {
@@ -78,7 +85,7 @@ async function main() {
       const transport = new StdioServerTransport();
 
       // Register all capabilities
-      registerTools(mcpServer, { sessionManager, apiClient, hooksManager });
+      registerTools(mcpServer, { sessionManager, apiClient, hooksManager, xquikClient });
       registerResources(mcpServer, { apiClient, sessionManager, hooksManager });
       registerPrompts(mcpServer, { apiClient, sessionManager, hooksManager });
       registerRoots(mcpServer, { apiClient, sessionManager, hooksManager });
@@ -110,7 +117,7 @@ async function main() {
       shutdown('STDIN_END');
     });
     logger.info('MCP Agent Social Server running', {
-      toolsCount: 3,
+      toolsCount: xquikClient ? 4 : 3,
       resourcesCount: 6,
       promptsCount: 8,
       rootsEnabled: true,
