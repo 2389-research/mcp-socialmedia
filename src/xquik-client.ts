@@ -29,6 +29,7 @@ export class XquikClient implements IXquikClient {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 
+  /** Search public X posts through the configured Xquik endpoint. */
   async searchPosts(options: XquikSearchOptions): Promise<unknown> {
     const params = new URLSearchParams({
       q: options.query,
@@ -67,6 +68,7 @@ export class XquikClient implements IXquikClient {
   }
 }
 
+/** Create the optional Xquik client when its API key is configured. */
 export function createXquikClientFromEnv(): IXquikClient | undefined {
   const apiKey = process.env.XQUIK_API_KEY?.trim();
   return apiKey ? new XquikClient(apiKey) : undefined;

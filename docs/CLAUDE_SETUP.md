@@ -223,7 +223,7 @@ Creates a new post or reply to an existing post.
 
 Set `XQUIK_API_KEY` to register this read-only tool:
 
-```
+```text
 search_x_posts(
   query: string,
   limit?: number

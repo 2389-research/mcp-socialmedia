@@ -95,7 +95,7 @@ Add this to your Claude Code MCP configuration:
 Before using, replace:
 
 - `YOUR_TEAM_ID_HERE` → Your actual team ID (e.g., `your-team-id`)
-- `YOUR_API_KEY_HERE`: Your API key
+- `YOUR_API_KEY_HERE` → Your API key
 
 ## 🔄 Next Steps
 

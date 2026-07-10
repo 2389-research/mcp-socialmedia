@@ -60,17 +60,13 @@ async function main() {
 
       logger.info('Starting in HTTP mode', { port: httpPort, host: httpHost });
 
-      httpServer = new HttpMcpServer(
-        sessionManager,
-        apiClient,
-        {
-          port: httpPort,
-          host: httpHost,
-          enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
-          corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
-        },
+      httpServer = new HttpMcpServer(sessionManager, apiClient, {
+        port: httpPort,
+        host: httpHost,
+        enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
+        corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
         xquikClient,
-      );
+      });
 
       await httpServer.start();
     } else {

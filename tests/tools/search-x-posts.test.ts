@@ -2,7 +2,7 @@
 // ABOUTME: Verifies successful results and sanitized failure responses
 
 import { jest } from '@jest/globals';
-import { searchXPostsToolHandler } from '../../src/tools/search-x-posts';
+import { searchXPostsInputSchema, searchXPostsToolHandler } from '../../src/tools/search-x-posts';
 import type { IXquikClient } from '../../src/xquik-client';
 
 describe('Search X Posts Tool', () => {
@@ -34,5 +34,16 @@ describe('Search X Posts Tool', () => {
       error: 'Failed to search X posts',
       details: 'Xquik request failed with status 429',
     });
+  });
+
+  it('applies the registered schema defaults and boundaries', () => {
+    expect(searchXPostsInputSchema.parse({ query: 'agents' })).toEqual({
+      query: 'agents',
+      limit: 10,
+    });
+    expect(searchXPostsInputSchema.safeParse({ query: '' }).success).toBe(false);
+    expect(searchXPostsInputSchema.safeParse({ query: 'x'.repeat(513) }).success).toBe(false);
+    expect(searchXPostsInputSchema.safeParse({ query: 'agents', limit: 0 }).success).toBe(false);
+    expect(searchXPostsInputSchema.safeParse({ query: 'agents', limit: 101 }).success).toBe(false);
   });
 });

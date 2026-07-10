@@ -59,14 +59,31 @@ describe('XquikClient', () => {
   });
 
   it('maps aborted requests to a bounded timeout error', async () => {
-    const aborted = new Error('aborted');
-    aborted.name = 'AbortError';
-    mockFetch.mockRejectedValueOnce(aborted);
-    const client = new XquikClient('test-key', undefined, 25, mockFetch);
+    jest.useFakeTimers();
 
-    await expect(client.searchPosts({ query: 'test', limit: 10 })).rejects.toThrow(
-      'Xquik request timed out after 25ms',
-    );
+    try {
+      mockFetch.mockImplementationOnce((_url, request) => {
+        return new Promise((_resolve, reject) => {
+          request?.signal?.addEventListener(
+            'abort',
+            () => {
+              const aborted = new Error('aborted');
+              aborted.name = 'AbortError';
+              reject(aborted);
+            },
+            { once: true },
+          );
+        });
+      });
+      const client = new XquikClient('test-key', undefined, 25, mockFetch);
+      const search = client.searchPosts({ query: 'test', limit: 10 });
+      const expectation = expect(search).rejects.toThrow('Xquik request timed out after 25ms');
+
+      await jest.advanceTimersByTimeAsync(25);
+      await expectation;
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('creates a client only when XQUIK_API_KEY is configured', () => {
@@ -79,7 +96,11 @@ describe('XquikClient', () => {
       process.env.XQUIK_API_KEY = '  test-key  ';
       expect(createXquikClientFromEnv()).toBeInstanceOf(XquikClient);
     } finally {
-      process.env.XQUIK_API_KEY = originalApiKey ?? '';
+      if (originalApiKey === undefined) {
+        Reflect.deleteProperty(process.env, 'XQUIK_API_KEY');
+      } else {
+        process.env.XQUIK_API_KEY = originalApiKey;
+      }
     }
   });
 });

@@ -16,20 +16,22 @@ export interface HttpServerOptions {
   host?: string;
   enableJsonResponse?: boolean;
   corsOrigin?: string;
+  xquikClient?: IXquikClient;
 }
 
 export class HttpMcpServer {
   private httpServer: ReturnType<typeof createServer> | null = null;
   private mcpServer: McpServer | null = null;
   private transport: StreamableHTTPServerTransport | null = null;
-  private readonly options: Required<HttpServerOptions>;
+  private readonly options: Required<Omit<HttpServerOptions, 'xquikClient'>>;
+  private readonly xquikClient?: IXquikClient;
 
   constructor(
     private readonly sessionManager: SessionManager,
     private readonly apiClient: ApiClient,
     options: HttpServerOptions = {},
-    private readonly xquikClient?: IXquikClient,
   ) {
+    this.xquikClient = options.xquikClient;
     this.options = {
       port: options.port ?? 3000,
       host: options.host ?? 'localhost',
