@@ -12,6 +12,7 @@ import { metrics } from './metrics.js';
 import { registerPrompts } from './prompts/index.js';
 import { registerResources } from './resources/index.js';
 import { registerRoots } from './roots/index.js';
+import { cleanupExpiredSessions } from './session-cleanup.js';
 import { SessionManager } from './session-manager.js';
 import { registerTools } from './tools/index.js';
 import { createXquikClientFromEnv } from './xquik-client.js';
@@ -149,11 +150,8 @@ async function main() {
     });
 
     // Set up periodic session cleanup (every 30 minutes)
-    cleanupInterval = setInterval(async () => {
-      const removed = await sessionManager.cleanupOldSessions(3600000); // 1 hour
-      if (removed > 0) {
-        logger.info(`Cleaned up ${removed} old sessions`);
-      }
+    cleanupInterval = setInterval(() => {
+      void cleanupExpiredSessions(sessionManager);
     }, 1800000); // 30 minutes
 
     // Set up keepalive to prevent connection timeout
