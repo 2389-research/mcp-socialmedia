@@ -534,7 +534,7 @@ describe('TimeoutManager', () => {
       expect(stats2.activeTimeouts).toBe(1);
 
       // Create another
-      manager.createClearableTimeout('test2');
+      const { clear: clearSecond } = manager.createClearableTimeout('test2');
       const stats3 = manager.getStats();
       expect(stats3.activeTimeouts).toBe(2);
 
@@ -543,6 +543,8 @@ describe('TimeoutManager', () => {
       await sleep(10); // Allow async cleanup
       const stats4 = manager.getStats();
       expect(stats4.activeTimeouts).toBe(1);
+
+      clearSecond();
     });
 
     it('should not leak timeouts on rapid creation and clearing', async () => {
