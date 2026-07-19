@@ -220,6 +220,7 @@ export class HttpMcpServer {
       apiClient: this.apiClient,
       sessionManager: this.sessionManager,
       hooksManager,
+      xquikClient: this.xquikClient,
     });
 
     // Connect transport

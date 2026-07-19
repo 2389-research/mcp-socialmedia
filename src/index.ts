@@ -85,7 +85,7 @@ async function main() {
       registerTools(mcpServer, { sessionManager, apiClient, hooksManager, xquikClient });
       registerResources(mcpServer, { apiClient, sessionManager, hooksManager });
       registerPrompts(mcpServer, { apiClient, sessionManager, hooksManager });
-      registerRoots(mcpServer, { apiClient, sessionManager, hooksManager });
+      registerRoots(mcpServer, { apiClient, sessionManager, hooksManager, xquikClient });
 
       // Connect to transport
       logger.debug('Connecting server to transport');
