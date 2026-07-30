@@ -9,25 +9,29 @@ import type { ApiClient } from './api-client.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import type { SessionManager } from './session-manager.js';
+import type { IXquikClient } from './xquik-client.js';
 
 export interface HttpServerOptions {
   port?: number;
   host?: string;
   enableJsonResponse?: boolean;
   corsOrigin?: string;
+  xquikClient?: IXquikClient;
 }
 
 export class HttpMcpServer {
   private httpServer: ReturnType<typeof createServer> | null = null;
   private mcpServer: McpServer | null = null;
   private transport: StreamableHTTPServerTransport | null = null;
-  private readonly options: Required<HttpServerOptions>;
+  private readonly options: Required<Omit<HttpServerOptions, 'xquikClient'>>;
+  private readonly xquikClient?: IXquikClient;
 
   constructor(
     private readonly sessionManager: SessionManager,
     private readonly apiClient: ApiClient,
     options: HttpServerOptions = {},
   ) {
+    this.xquikClient = options.xquikClient;
     this.options = {
       port: options.port ?? 3000,
       host: options.host ?? 'localhost',
@@ -200,6 +204,7 @@ export class HttpMcpServer {
       sessionManager: this.sessionManager,
       apiClient: this.apiClient,
       hooksManager,
+      xquikClient: this.xquikClient,
     });
     registerResources(this.mcpServer, {
       apiClient: this.apiClient,
@@ -215,6 +220,7 @@ export class HttpMcpServer {
       apiClient: this.apiClient,
       sessionManager: this.sessionManager,
       hooksManager,
+      xquikClient: this.xquikClient,
     });
 
     // Connect transport

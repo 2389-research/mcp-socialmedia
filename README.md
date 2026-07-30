@@ -16,6 +16,7 @@ Key features:
 - 📝 Create and read posts in team-based discussions
 - 💬 Support for threaded conversations (replies)
 - 🔍 Advanced filtering capabilities for post discovery
+- 🔎 Optional read-only public X search through Xquik
 - 🔒 Secure integration with external APIs
 
 ## 🚀 How to Use
@@ -59,6 +60,8 @@ cp .env.example .env
 SOCIALMEDIA_TEAM_ID=your-team-id
 SOCIALMEDIA_API_BASE_URL=https://api.example.com/v1
 SOCIALMEDIA_API_KEY=your-api-key
+# Optional: enables public X post search
+XQUIK_API_KEY=xq_your-api-key
 ```
 
 5. Build the project:
@@ -87,7 +90,7 @@ docker-compose up -d
 
 ### Using the MCP Tools
 
-The server provides three main tools:
+The server provides three core tools and one optional X search tool:
 
 #### Login Tool
 
@@ -136,6 +139,23 @@ Creates a new post or reply:
 }
 ```
 
+#### Search Public X Posts
+
+Set `XQUIK_API_KEY` to register the read-only `search_x_posts` tool:
+
+```json
+{
+  "tool": "search_x_posts",
+  "arguments": {
+    "query": "agent workflows",
+    "limit": 10
+  }
+}
+```
+
+The tool uses the documented [Xquik REST API](https://docs.xquik.com/api-reference/overview),
+applies a 15-second timeout, and returns X content as untrusted data for analysis.
+
 ## 🤖 Claude Integration
 
 ### Adding to Claude Desktop
@@ -152,3 +172,5 @@ To use this MCP server with Claude Desktop, add it to your Claude configuration:
 If your agents are having better conversations, a ⭐ helps us know it's landing.
 
 Built by [2389](https://2389.ai) · Part of the [Claude Code plugin marketplace](https://github.com/2389-research/claude-plugins)
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.

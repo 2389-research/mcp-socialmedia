@@ -25,6 +25,7 @@ interface MockContext {
   apiClient: object;
   sessionManager: object;
   rootsManager?: RootsManager;
+  xquikClient?: { searchPosts: jest.Mock };
 }
 
 describe('Roots System', () => {
@@ -82,12 +83,21 @@ describe('Roots System', () => {
         );
       });
 
-      it('should include allowed operations', () => {
+      it('should include only tools available without Xquik configuration', () => {
         const defaultRoot = rootsManager.getRootForSession('test-session');
 
         expect(defaultRoot?.limits.allowedOperations).toEqual(
           expect.arrayContaining(['read_posts', 'create_post', 'login']),
         );
+        expect(defaultRoot?.limits.allowedOperations).not.toContain('search_x_posts');
+      });
+
+      it('should include Xquik search only when its client is available', () => {
+        const xquikRootsManager = new RootsManager(true);
+        const defaultRoot = xquikRootsManager.getRootForSession('test-session');
+
+        expect(defaultRoot?.limits.allowedOperations).toContain('search_x_posts');
+        expect(xquikRootsManager.isOperationAllowed('test-session', 'search_x_posts')).toBe(true);
       });
     });
 
@@ -550,6 +560,20 @@ describe('Roots System', () => {
       registerRoots(mockServer, mockContext);
 
       expect(mockContext.rootsManager).toBeInstanceOf(RootsManager);
+    });
+
+    it('should authorize Xquik search only when registration receives its client', () => {
+      const withoutXquik = registerRoots(mockServer, mockContext);
+      const withXquik = registerRoots(mockServer, {
+        ...mockContext,
+        xquikClient: { searchPosts: jest.fn() },
+      });
+
+      expect(withoutXquik.isOperationAllowed('session', 'search_x_posts')).toBe(false);
+      expect(withXquik.isOperationAllowed('session', 'search_x_posts')).toBe(true);
+      expect(withXquik.getRootForSession('session')?.limits.allowedOperations).toContain(
+        'search_x_posts',
+      );
     });
 
     it('should create working roots resource handler', async () => {

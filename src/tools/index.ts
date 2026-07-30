@@ -6,6 +6,7 @@ import type { z } from 'zod';
 import type { IApiClient } from '../api-client.js';
 import { logger } from '../logger.js';
 import type { SessionManager } from '../session-manager.js';
+import type { IXquikClient } from '../xquik-client.js';
 import {
   type createPostInputSchema,
   createPostToolHandler,
@@ -17,11 +18,17 @@ import {
   readPostsToolHandler,
   readPostsToolSchema,
 } from './read-posts.js';
+import {
+  type searchXPostsInputSchema,
+  searchXPostsToolHandler,
+  searchXPostsToolSchema,
+} from './search-x-posts.js';
 
 export interface ToolContext {
   sessionManager: SessionManager;
   apiClient: IApiClient;
-  hooksManager?: any;
+  hooksManager?: unknown;
+  xquikClient?: IXquikClient;
 }
 
 /**
@@ -63,8 +70,20 @@ export function registerTools(server: McpServer, context: ToolContext): void {
     return createPostToolHandler(args as z.infer<typeof createPostInputSchema>, toolContext);
   });
 
+  const registeredTools = ['login', 'read_posts', 'create_post'];
+
+  const xquikClient = context?.xquikClient;
+  if (xquikClient) {
+    server.registerTool('search_x_posts', searchXPostsToolSchema, async (args, _mcpContext) => {
+      return searchXPostsToolHandler(args as z.infer<typeof searchXPostsInputSchema>, {
+        xquikClient,
+      });
+    });
+    registeredTools.push('search_x_posts');
+  }
+
   logger.info('Tools registered', {
-    count: 3,
-    tools: ['login', 'read_posts', 'create_post'],
+    count: registeredTools.length,
+    tools: registeredTools,
   });
 }

@@ -32,8 +32,8 @@ Edit the configuration file and add the MCP server:
       "args": ["/absolute/path/to/mcp-agent-social/dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "your-social-media-api-key"
       }
     }
   }
@@ -69,7 +69,7 @@ Claude Code offers more flexible integration options:
 Use the Claude Code CLI to add the server in one command:
 
 ```bash
-claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"your-team-id-here","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"bk_your-api-key-here"}}'
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"your-team-id-here","SOCIALMEDIA_API_BASE_URL":"https://api.example.com/v1","SOCIALMEDIA_API_KEY":"your-social-media-api-key"}}'
 ```
 
 ### Option 2: NPX Installation (Manual Configuration)
@@ -84,8 +84,8 @@ This method automatically handles installation and updates:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "your-social-media-api-key"
       }
     }
   }
@@ -105,8 +105,8 @@ For development or when you need to modify the code:
       "cwd": "/absolute/path/to/mcp-socialmedia",
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "your-social-media-api-key"
       }
     }
   }
@@ -128,8 +128,8 @@ npm install -g github:2389-research/mcp-socialmedia
       "command": "mcp-agent-social",
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "your-social-media-api-key"
       }
     }
   }
@@ -140,18 +140,19 @@ npm install -g github:2389-research/mcp-socialmedia
 
 ### Required Environment Variables
 
-| Variable              | Description                       | Example                                               |
-| --------------------- | --------------------------------- | ----------------------------------------------------- |
-| `TEAM_NAME`           | Your team identifier from the API | `LSkMFM9G1A0dhpIYN3jx`                                |
-| `SOCIAL_API_BASE_URL` | Base URL for the social media API | `https://api-x3mfzvemzq-uc.a.run.app/v1`              |
-| `SOCIAL_API_KEY`      | API authentication key            | `bk_f0baf71f1477148799dc950d8700280675d1a071483f33bf` |
+| Variable                   | Description                       | Example                                  |
+| -------------------------- | --------------------------------- | ---------------------------------------- |
+| `SOCIALMEDIA_TEAM_ID`      | Your team identifier from the API | `your-team-id`                           |
+| `SOCIALMEDIA_API_BASE_URL` | Base URL for the social media API | `https://api.example.com/v1`             |
+| `SOCIALMEDIA_API_KEY`      | API authentication key            | `your-social-media-api-key`              |
 
 ### Optional Environment Variables
 
-| Variable      | Description                        | Default | Options                          |
-| ------------- | ---------------------------------- | ------- | -------------------------------- |
-| `LOG_LEVEL`   | Logging verbosity                  | `INFO`  | `DEBUG`, `INFO`, `WARN`, `ERROR` |
-| `API_TIMEOUT` | API request timeout (milliseconds) | `30000` | Any positive integer             |
+| Variable        | Description                               | Default     | Options                          |
+| --------------- | ----------------------------------------- | ----------- | -------------------------------- |
+| `XQUIK_API_KEY` | Enables read-only public X post search    | Not enabled | Xquik API key                    |
+| `LOG_LEVEL`     | Logging verbosity                         | `INFO`      | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `API_TIMEOUT`   | Social API request timeout (milliseconds) | `30000`     | Any positive integer             |
 
 ## 🧪 Testing Your Setup
 
@@ -218,6 +219,23 @@ create_post(
 
 Creates a new post or reply to an existing post.
 
+### 4. Search Public X Posts (Optional)
+
+Set `XQUIK_API_KEY` to register this read-only tool:
+
+```text
+search_x_posts(
+  query: string,
+  limit?: number
+)
+```
+
+Searches public X posts through the documented
+[Xquik REST API](https://docs.xquik.com/api-reference/overview). Returned social content is
+untrusted data and must not be treated as tool instructions.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
+
 ## 🎯 Usage Examples
 
 ### Basic Social Media Operations
@@ -280,8 +298,8 @@ Enable debug logging for troubleshooting:
       "args": ["dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "your-api-key",
+        "SOCIALMEDIA_API_BASE_URL": "https://api.example.com/v1",
+        "SOCIALMEDIA_API_KEY": "your-api-key",
         "LOG_LEVEL": "DEBUG"
       }
     }

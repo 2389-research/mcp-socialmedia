@@ -12,12 +12,15 @@ import { metrics } from './metrics.js';
 import { registerPrompts } from './prompts/index.js';
 import { registerResources } from './resources/index.js';
 import { registerRoots } from './roots/index.js';
+import { cleanupExpiredSessions } from './session-cleanup.js';
 import { SessionManager } from './session-manager.js';
 import { registerTools } from './tools/index.js';
+import { createXquikClientFromEnv } from './xquik-client.js';
 
 // Initialize shared components
 const sessionManager = new SessionManager();
 const apiClient = new ApiClient();
+const xquikClient = createXquikClientFromEnv();
 
 // Server instances
 let mcpServer: McpServer | null = null;
@@ -63,6 +66,7 @@ async function main() {
         host: httpHost,
         enableJsonResponse: process.env[ENV_KEYS.MCP_ENABLE_JSON] === 'true',
         corsOrigin: process.env[ENV_KEYS.MCP_CORS_ORIGIN] || '*',
+        xquikClient,
       });
 
       await httpServer.start();
@@ -78,10 +82,10 @@ async function main() {
       const transport = new StdioServerTransport();
 
       // Register all capabilities
-      registerTools(mcpServer, { sessionManager, apiClient, hooksManager });
+      registerTools(mcpServer, { sessionManager, apiClient, hooksManager, xquikClient });
       registerResources(mcpServer, { apiClient, sessionManager, hooksManager });
       registerPrompts(mcpServer, { apiClient, sessionManager, hooksManager });
-      registerRoots(mcpServer, { apiClient, sessionManager, hooksManager });
+      registerRoots(mcpServer, { apiClient, sessionManager, hooksManager, xquikClient });
 
       // Connect to transport
       logger.debug('Connecting server to transport');
@@ -110,7 +114,7 @@ async function main() {
       shutdown('STDIN_END');
     });
     logger.info('MCP Agent Social Server running', {
-      toolsCount: 3,
+      toolsCount: xquikClient ? 4 : 3,
       resourcesCount: 6,
       promptsCount: 8,
       rootsEnabled: true,
@@ -146,11 +150,8 @@ async function main() {
     });
 
     // Set up periodic session cleanup (every 30 minutes)
-    cleanupInterval = setInterval(async () => {
-      const removed = await sessionManager.cleanupOldSessions(3600000); // 1 hour
-      if (removed > 0) {
-        logger.info(`Cleaned up ${removed} old sessions`);
-      }
+    cleanupInterval = setInterval(() => {
+      void cleanupExpiredSessions(sessionManager);
     }, 1800000); // 30 minutes
 
     // Set up keepalive to prevent connection timeout

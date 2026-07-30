@@ -21,6 +21,9 @@ interface MockContext {
   hooksManager?: {
     runHook: jest.MockedFunction<(...args: any[]) => any>;
   };
+  xquikClient?: {
+    searchPosts: jest.MockedFunction<(...args: any[]) => any>;
+  };
 }
 
 describe('Tools Index', () => {
@@ -64,6 +67,24 @@ describe('Tools Index', () => {
       );
       expect(mockServer.registerTool).toHaveBeenCalledWith(
         'create_post',
+        expect.any(Object),
+        expect.any(Function),
+      );
+    });
+
+    test('should register optional X search when an Xquik client is provided', () => {
+      const contextWithXquik = {
+        ...mockContext,
+        xquikClient: {
+          searchPosts: jest.fn(),
+        },
+      };
+
+      registerTools(mockServer, contextWithXquik);
+
+      expect(mockServer.registerTool).toHaveBeenCalledTimes(4);
+      expect(mockServer.registerTool).toHaveBeenCalledWith(
+        'search_x_posts',
         expect.any(Object),
         expect.any(Function),
       );

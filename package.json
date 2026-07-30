@@ -63,5 +63,8 @@
     "jest-junit": "^16.0.0",
     "ts-jest": "^29.3.4",
     "tsx": "^4.19.4"
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.17"
   }
 }

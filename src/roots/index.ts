@@ -3,19 +3,28 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '../logger.js';
+import type { IXquikClient } from '../xquik-client.js';
 import { type RootDefinition, RootLimits } from './types.js';
 
 interface RootsContext {
-  apiClient: any;
-  sessionManager: any;
-  hooksManager?: any;
+  apiClient: unknown;
+  sessionManager: unknown;
+  hooksManager?: unknown;
+  rootsManager?: RootsManager;
+  xquikClient?: IXquikClient;
 }
 
 export class RootsManager {
   private roots: Map<string, RootDefinition> = new Map();
   private sessionRootMap: Map<string, string> = new Map();
 
-  constructor() {
+  /** Create roots whose allowlist matches the optional Xquik capability. */
+  constructor(enableXquikSearch = false) {
+    const allowedOperations = ['read_posts', 'create_post', 'login'];
+    if (enableXquikSearch) {
+      allowedOperations.push('search_x_posts');
+    }
+
     // Define default root for social media workspace
     const defaultRoot: RootDefinition = {
       uri: 'social://workspace',
@@ -25,7 +34,7 @@ export class RootsManager {
         maxPostsPerHour: 10,
         maxReadRequestsPerMinute: 30,
         maxConcurrentSessions: 5,
-        allowedOperations: ['read_posts', 'create_post', 'login'],
+        allowedOperations,
         maxContentLength: 2000,
         rateLimitWindow: 3600000, // 1 hour in ms
       },
@@ -114,10 +123,10 @@ export class RootsManager {
 }
 
 export function registerRoots(server: McpServer, context: RootsContext) {
-  const rootsManager = new RootsManager();
+  const rootsManager = new RootsManager(context.xquikClient !== undefined);
 
   // Add the roots manager to the context for other modules to use
-  (context as any).rootsManager = rootsManager;
+  context.rootsManager = rootsManager;
 
   // Register roots as a resource
   server.resource(
