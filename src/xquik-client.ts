@@ -6,20 +6,25 @@ import fetch, { type RequestInit } from 'node-fetch';
 const DEFAULT_BASE_URL = 'https://xquik.com/api/v1';
 const DEFAULT_TIMEOUT_MS = 15000;
 
+/** Fetch implementation accepted for production use and deterministic tests. */
 export type XquikFetchFunction = typeof fetch;
 
+/** Define the bounded query sent to the Xquik search endpoint. */
 export interface XquikSearchOptions {
   query: string;
   limit: number;
 }
 
+/** Expose the read-only operation required by the MCP tool. */
 export interface IXquikClient {
   searchPosts(options: XquikSearchOptions): Promise<unknown>;
 }
 
+/** Search public X posts through an authenticated Xquik endpoint. */
 export class XquikClient implements IXquikClient {
   private readonly baseUrl: string;
 
+  /** Create a client with overridable transport settings for deterministic tests. */
   constructor(
     private readonly apiKey: string,
     baseUrl: string = DEFAULT_BASE_URL,

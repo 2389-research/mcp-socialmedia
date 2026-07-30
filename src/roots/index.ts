@@ -18,6 +18,7 @@ export class RootsManager {
   private roots: Map<string, RootDefinition> = new Map();
   private sessionRootMap: Map<string, string> = new Map();
 
+  /** Create roots whose allowlist matches the optional Xquik capability. */
   constructor(enableXquikSearch = false) {
     const allowedOperations = ['read_posts', 'create_post', 'login'];
     if (enableXquikSearch) {
