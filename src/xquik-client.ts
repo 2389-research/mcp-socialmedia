@@ -6,6 +6,15 @@ import fetch, { type RequestInit } from 'node-fetch';
 const DEFAULT_BASE_URL = 'https://xquik.com/api/v1';
 const DEFAULT_TIMEOUT_MS = 15000;
 
+/** Represent a non-successful Xquik response without exposing response data. */
+class XquikHttpError extends Error {
+  /** Preserve the response status for deterministic error handling. */
+  constructor(readonly status: number) {
+    super(`Xquik request failed with status ${status}`);
+    this.name = 'XquikHttpError';
+  }
+}
+
 /** Fetch implementation accepted for production use and deterministic tests. */
 export type XquikFetchFunction = typeof fetch;
 
@@ -55,7 +64,7 @@ export class XquikClient implements IXquikClient {
       const response = await this.fetchFn(`${this.baseUrl}/x/tweets/search?${params}`, request);
 
       if (!response.ok) {
-        throw new Error(`Xquik request failed with status ${response.status}`);
+        throw new XquikHttpError(response.status);
       }
 
       return await response.json();
@@ -63,7 +72,7 @@ export class XquikClient implements IXquikClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`Xquik request timed out after ${this.timeoutMs}ms`);
       }
-      if (error instanceof Error && error.message.startsWith('Xquik request failed with status')) {
+      if (error instanceof XquikHttpError) {
         throw error;
       }
       throw new Error('Xquik request failed');

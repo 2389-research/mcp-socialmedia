@@ -2,17 +2,18 @@
 // ABOUTME: Verifies request construction, errors, timeouts, and environment setup
 
 import { jest } from '@jest/globals';
+import type { Response } from 'node-fetch';
 import {
   XquikClient,
   type XquikFetchFunction,
   createXquikClientFromEnv,
 } from '../src/xquik-client';
 
-type MockResponse = {
-  ok: boolean;
-  status: number;
-  json: jest.MockedFunction<() => Promise<unknown>>;
-};
+type MockResponse = Pick<Response, 'ok' | 'status' | 'json'>;
+
+function createMockResponse(response: MockResponse): Response {
+  return response as unknown as Response;
+}
 
 describe('XquikClient', () => {
   let mockFetch: jest.MockedFunction<XquikFetchFunction>;
@@ -23,11 +24,13 @@ describe('XquikClient', () => {
 
   it('searches posts with bounded query parameters and API key authentication', async () => {
     const resultBody = { tweets: [{ id: 'tweet-1', text: 'Result' }] };
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: jest.fn().mockResolvedValue(resultBody),
-    } as MockResponse);
+    mockFetch.mockResolvedValueOnce(
+      createMockResponse({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(resultBody),
+      }),
+    );
     const client = new XquikClient('test-key', 'https://example.com/api/v1/', 5000, mockFetch);
 
     const result = await client.searchPosts({ query: 'agent tools', limit: 5 });
@@ -46,15 +49,26 @@ describe('XquikClient', () => {
   });
 
   it('returns a status-only error without exposing response details', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: jest.fn(),
-    } as MockResponse);
+    mockFetch.mockResolvedValueOnce(
+      createMockResponse({
+        ok: false,
+        status: 401,
+        json: jest.fn(),
+      }),
+    );
     const client = new XquikClient('invalid-key', undefined, 5000, mockFetch);
 
     await expect(client.searchPosts({ query: 'test', limit: 10 })).rejects.toThrow(
       'Xquik request failed with status 401',
+    );
+  });
+
+  it('maps transport failures to a generic error without matching their messages', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Xquik request failed with status fabricated'));
+    const client = new XquikClient('test-key', undefined, 5000, mockFetch);
+
+    await expect(client.searchPosts({ query: 'test', limit: 10 })).rejects.toThrow(
+      /^Xquik request failed$/,
     );
   });
 
