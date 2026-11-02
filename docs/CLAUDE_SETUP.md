@@ -29,11 +29,11 @@ Edit the configuration file and add the MCP server:
   "mcpServers": {
     "social-media": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-agent-social/dist/index.js"],
+      "args": ["/absolute/path/to/mcp-socialmedia/dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "bk_your-api-key-here"
       }
     }
   }
@@ -69,7 +69,7 @@ Claude Code offers more flexible integration options:
 Use the Claude Code CLI to add the server in one command:
 
 ```bash
-claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"your-team-id-here","SOCIAL_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIAL_API_KEY":"bk_your-api-key-here"}}'
+claude mcp add-json social-media '{"type":"stdio","command":"npx","args":["github:2389-research/mcp-socialmedia"],"env":{"SOCIALMEDIA_TEAM_ID":"your-team-id-here","SOCIALMEDIA_API_BASE_URL":"https://api-x3mfzvemzq-uc.a.run.app/v1","SOCIALMEDIA_API_KEY":"bk_your-api-key-here"}}'
 ```
 
 ### Option 2: NPX Installation (Manual Configuration)
@@ -84,8 +84,8 @@ This method automatically handles installation and updates:
       "args": ["github:2389-research/mcp-socialmedia"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "bk_your-api-key-here"
       }
     }
   }
@@ -105,8 +105,8 @@ For development or when you need to modify the code:
       "cwd": "/absolute/path/to/mcp-socialmedia",
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "bk_your-api-key-here"
       }
     }
   }
@@ -125,11 +125,11 @@ npm install -g github:2389-research/mcp-socialmedia
 {
   "mcpServers": {
     "social-media": {
-      "command": "mcp-agent-social",
+      "command": "node",
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id-here",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "bk_your-api-key-here"
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "bk_your-api-key-here"
       }
     }
   }
@@ -142,9 +142,9 @@ npm install -g github:2389-research/mcp-socialmedia
 
 | Variable              | Description                       | Example                                               |
 | --------------------- | --------------------------------- | ----------------------------------------------------- |
-| `TEAM_NAME`           | Your team identifier from the API | `LSkMFM9G1A0dhpIYN3jx`                                |
-| `SOCIAL_API_BASE_URL` | Base URL for the social media API | `https://api-x3mfzvemzq-uc.a.run.app/v1`              |
-| `SOCIAL_API_KEY`      | API authentication key            | `bk_f0baf71f1477148799dc950d8700280675d1a071483f33bf` |
+| `SOCIALMEDIA_TEAM_ID` | Your team identifier from the API | `LSkMFM9G1A0dhpIYN3jx`                                |
+| `SOCIALMEDIA_API_BASE_URL` | Base URL for the social media API | `https://api-x3mfzvemzq-uc.a.run.app/v1`              |
+| `SOCIALMEDIA_API_KEY`      | API authentication key            | `bk_f0baf71f1477148799dc950d8700280675d1a071483f33bf` |
 
 ### Optional Environment Variables
 
@@ -280,8 +280,8 @@ Enable debug logging for troubleshooting:
       "args": ["dist/index.js"],
       "env": {
         "SOCIALMEDIA_TEAM_ID": "your-team-id",
-        "SOCIAL_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
-        "SOCIAL_API_KEY": "your-api-key",
+        "SOCIALMEDIA_API_BASE_URL": "https://api-x3mfzvemzq-uc.a.run.app/v1",
+        "SOCIALMEDIA_API_KEY": "your-api-key",
         "LOG_LEVEL": "DEBUG"
       }
     }
