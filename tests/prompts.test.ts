@@ -167,6 +167,15 @@ describe('Prompt Handlers', () => {
       expect(Array.isArray(draftReplyPrompt?.arguments)).toBe(true);
     });
 
+    it('should carry non-empty argument descriptions from zod describe()', async () => {
+      const result = await listPrompts();
+
+      const describedArgs = result.prompts.flatMap((prompt) =>
+        prompt.arguments.filter((arg) => arg.description.length > 0),
+      );
+      expect(describedArgs.length).toBeGreaterThan(0);
+    });
+
     it('should mark required and optional arguments correctly', async () => {
       const result = await listPrompts();
 
