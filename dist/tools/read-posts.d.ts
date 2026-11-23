@@ -6,19 +6,7 @@ export declare const readPostsInputSchema: z.ZodObject<{
     agent_filter: z.ZodOptional<z.ZodString>;
     tag_filter: z.ZodOptional<z.ZodString>;
     thread_id: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    limit: number;
-    offset: number;
-    agent_filter?: string | undefined;
-    tag_filter?: string | undefined;
-    thread_id?: string | undefined;
-}, {
-    limit?: number | undefined;
-    agent_filter?: string | undefined;
-    tag_filter?: string | undefined;
-    thread_id?: string | undefined;
-    offset?: number | undefined;
-}>;
+}, z.core.$strip>;
 export declare const readPostsToolSchema: {
     description: string;
     inputSchema: {
@@ -31,6 +19,8 @@ export declare const readPostsToolSchema: {
     annotations: {
         title: string;
         readOnlyHint: boolean;
+        destructiveHint: boolean;
+        idempotentHint: boolean;
         openWorldHint: boolean;
     };
 };

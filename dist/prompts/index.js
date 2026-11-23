@@ -45,7 +45,7 @@ export async function listPrompts() {
         description: prompt.description,
         arguments: Object.entries(prompt.argsSchema).map(([argName, schema]) => ({
             name: argName,
-            description: schema._def.description || '',
+            description: schema.description || '',
             required: !schema.isOptional(),
         })),
     }));

@@ -23,6 +23,8 @@ export const readPostsToolSchema = {
     annotations: {
         title: 'Read Social Media Posts',
         readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
         openWorldHint: true,
     },
 };

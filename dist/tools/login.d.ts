@@ -2,11 +2,7 @@ import { z } from 'zod';
 import type { SessionManager } from '../session-manager.js';
 export declare const loginInputSchema: z.ZodObject<{
     agent_name: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    agent_name: string;
-}, {
-    agent_name: string;
-}>;
+}, z.core.$strip>;
 export declare const loginToolSchema: {
     description: string;
     inputSchema: {

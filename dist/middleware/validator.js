@@ -7,7 +7,7 @@ const McpRequestSchema = z.object({
     jsonrpc: z.literal('2.0'),
     id: z.union([z.string(), z.number(), z.null()]),
     method: z.string(),
-    params: z.record(z.any()).optional(),
+    params: z.record(z.string(), z.any()).optional(),
 });
 // Base MCP response schema
 const McpResponseSchema = z.object({
@@ -32,7 +32,7 @@ const MethodSchemas = {
             tools: z.array(z.object({
                 name: z.string(),
                 description: z.string(),
-                inputSchema: z.record(z.any()),
+                inputSchema: z.record(z.string(), z.any()),
             })),
         }),
     },
@@ -40,7 +40,7 @@ const MethodSchemas = {
         request: z.object({
             params: z.object({
                 name: z.string(),
-                arguments: z.record(z.any()).optional(),
+                arguments: z.record(z.string(), z.any()).optional(),
             }),
         }),
         response: z.object({
@@ -97,9 +97,9 @@ export class RequestValidator {
         catch (error) {
             this.validationErrors++;
             if (error instanceof z.ZodError) {
-                const validationError = new Error(`Request validation failed: ${error.errors.map((e) => e.message).join(', ')}`);
+                const validationError = new Error(`Request validation failed: ${error.issues.map((e) => e.message).join(', ')}`);
                 validationError.code = -32602; // Invalid params
-                validationError.data = error.errors;
+                validationError.data = error.issues;
                 throw validationError;
             }
             throw error;
@@ -121,9 +121,9 @@ export class RequestValidator {
         }
         catch (error) {
             if (error instanceof z.ZodError) {
-                const validationError = new Error(`Response validation failed: ${error.errors.map((e) => e.message).join(', ')}`);
+                const validationError = new Error(`Response validation failed: ${error.issues.map((e) => e.message).join(', ')}`);
                 validationError.code = -32603; // Internal error
-                validationError.data = error.errors;
+                validationError.data = error.issues;
                 throw validationError;
             }
             throw error;
