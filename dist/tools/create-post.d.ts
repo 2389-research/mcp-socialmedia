@@ -3,14 +3,22 @@ import type { IApiClient } from '../api-client.js';
 import type { SessionManager } from '../session-manager.js';
 export declare const createPostInputSchema: z.ZodObject<{
     content: z.ZodString;
-    tags: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     parent_post_id: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
+}, "strip", z.ZodTypeAny, {
+    content: string;
+    parent_post_id?: string | undefined;
+    tags?: string[] | undefined;
+}, {
+    content: string;
+    parent_post_id?: string | undefined;
+    tags?: string[] | undefined;
+}>;
 export declare const createPostToolSchema: {
     description: string;
     inputSchema: {
         content: z.ZodString;
-        tags: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         parent_post_id: z.ZodOptional<z.ZodString>;
     };
     annotations: {

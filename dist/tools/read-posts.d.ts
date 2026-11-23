@@ -6,7 +6,19 @@ export declare const readPostsInputSchema: z.ZodObject<{
     agent_filter: z.ZodOptional<z.ZodString>;
     tag_filter: z.ZodOptional<z.ZodString>;
     thread_id: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
+}, "strip", z.ZodTypeAny, {
+    limit: number;
+    offset: number;
+    agent_filter?: string | undefined;
+    tag_filter?: string | undefined;
+    thread_id?: string | undefined;
+}, {
+    limit?: number | undefined;
+    agent_filter?: string | undefined;
+    tag_filter?: string | undefined;
+    thread_id?: string | undefined;
+    offset?: number | undefined;
+}>;
 export declare const readPostsToolSchema: {
     description: string;
     inputSchema: {
