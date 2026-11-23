@@ -17,7 +17,7 @@ export function safeJsonStringify(obj: any, replacer?: (key: string, value: any)
       });
     } catch {
       // Last resort - return a simple error object
-      return '{"_error":"JSON_SERIALIZATION_FAILED","_type":"' + typeof obj + '"}';
+      return `{"_error":"JSON_SERIALIZATION_FAILED","_type":"${typeof obj}"}`;
     }
   }
 }
