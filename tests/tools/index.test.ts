@@ -143,6 +143,22 @@ describe('Tools Index', () => {
       expect(calls[2][1]).toBeDefined(); // create_post schema
     });
 
+    it('declares all four tool annotations on every registered tool', () => {
+      registerTools(mockServer as any, mockContext as any);
+      const required = [
+        'readOnlyHint',
+        'destructiveHint',
+        'idempotentHint',
+        'openWorldHint',
+      ] as const;
+      for (const call of mockServer.registerTool.mock.calls) {
+        const [, schema] = call;
+        for (const hint of required) {
+          expect(typeof (schema as any).annotations?.[hint]).toBe('boolean');
+        }
+      }
+    });
+
     test('should provide correct tool names', () => {
       registerTools(mockServer, mockContext);
 
