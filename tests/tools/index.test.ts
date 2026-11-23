@@ -156,6 +156,10 @@ describe('Tools Index', () => {
         for (const hint of required) {
           expect(typeof (schema as any).annotations?.[hint]).toBe('boolean');
         }
+        // A tool can never be both read-only and destructive
+        expect(
+          (schema as any).annotations.readOnlyHint && (schema as any).annotations.destructiveHint,
+        ).toBe(false);
       }
     });
 

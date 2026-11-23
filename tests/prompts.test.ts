@@ -173,7 +173,7 @@ describe('Prompt Handlers', () => {
       const describedArgs = result.prompts.flatMap((prompt) =>
         prompt.arguments.filter((arg) => arg.description.length > 0),
       );
-      expect(describedArgs.length).toBeGreaterThan(0);
+      expect(describedArgs.length).toBe(result.prompts.reduce((n, p) => n + p.arguments.length, 0));
     });
 
     it('should mark required and optional arguments correctly', async () => {
