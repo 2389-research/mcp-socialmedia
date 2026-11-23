@@ -36,3 +36,7 @@ output.txt
 # Claude Code files
 .claude/
 .private-journal/
+
+# Superpowers SDD scratch + worktrees
+.superpowers/
+.worktrees/
